@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/Logo.png" alt="whatts logo" width="200"/>
+</div>
+
 # whatts
 
 **Wilson-Hazen statistics for Autocorrelated Trending Time Series**
