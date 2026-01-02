@@ -1,6 +1,9 @@
-# whatts
+<div align="center">
+  <img src="assets/Logo.png" alt="whatts logo" width="600"/>
+</div>
 
-**Wilson-Hazen statistics for Autocorrelated Trending Time Series**
+# whatts - Wilson-Hazen statistics for Autocorrelated Trending Time Series
+
 
 `whatts` is a Python library designed to calculate rigorous regulatory compliance statistics for environmental time series. It moves beyond simple summary statistics by accounting for the two most common features of environmental data that traditional methods ignore: **Trends** (non-stationarity) and **Autocorrelation** (serial dependence).
 
