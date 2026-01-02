@@ -42,8 +42,12 @@ def plot_compliance_explainer(dates, values, projected_values, result_dict):
     stat_val = result_dict['point_estimate']
     utl = result_dict['upper_tolerance_limit']
 
-    ax2.axhline(stat_val, color='red', linewidth=2, label='95th %ile')
-    ax2.axhline(utl, color='red', linestyle='--', label='UTL (95% Conf)')
+    # Use dynamic labels if available in result_dict
+    stat_label = result_dict.get('statistic', 'Target %ile')
+    conf = result_dict.get('confidence_level', 0.95)
+
+    ax2.axhline(stat_val, color='red', linewidth=2, label=stat_label)
+    ax2.axhline(utl, color='red', linestyle='--', label=f'UTL ({int(conf*100)}% Conf)')
 
     ax2.set_title("Step 2: Assessing Compliance")
 

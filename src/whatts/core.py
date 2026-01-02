@@ -103,7 +103,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         # A. Find where the limit sits in our projected data
         obs_rank = inverse_hazen(analysis_data, regulatory_limit)
 
-        # B. Calculate probability that True 95th <= Limit
+        # B. Calculate probability that True Target Percentile <= Limit
         compliance_prob = score_test_probability(
             p_obs=obs_rank,
             p_null=target_percentile,
@@ -112,6 +112,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
 
     return {
         "statistic": f"{int(target_percentile*100)}th Percentile",
+        "target_percentile": target_percentile,
         "point_estimate": point_est,
         "upper_tolerance_limit": utl_value,  # THIS is the number to compare to the limit
         "confidence_level": confidence,
