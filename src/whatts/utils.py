@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from . import mannks  # The internal module
+import MannKS  # The external dependency (Package name is mannks, but module is MannKS)
 
 def project_to_current_state(dates, values):
     """
@@ -18,58 +18,53 @@ def project_to_current_state(dates, values):
             'p_value': float
         }
     """
-    # 1. Run Mann-Kendall Test
-    # Assuming mannks.mann_kendall returns an object with 'p_value' and 'trend' attributes
-    # Adjust this line based on exact mannks API documentation
-    mk_result = mannks.mann_kendall(values)
+    # 1. Run Mann-Kendall Test using MannKS package
+    # MannKS.trend_test requires (values, times)
+    # Times needs to be numeric. We'll use ordinal or similar relative to start.
+    # To be precise, let's use seconds from epoch or ordinals.
+    # The MannKS package handles time as numeric.
 
-    # Common significance threshold
-    alpha = 0.05
-    is_significant = mk_result.p_value < alpha
+    date_numerics = dates.map(pd.Timestamp.timestamp).values
 
-    slope = 0.0
+    # Run the test
+    # mk_test_method='robust' is default, handles ties etc.
+    # alpha default is 0.05
+    mk_result = MannKS.trend_test(values, date_numerics, alpha=0.05)
+
+    # Extract results
+    # Based on exploration:
+    # mk_result has attributes: p, slope, h (boolean significance)
+    # The slope is in units per unit of time (seconds in our case).
+
+    p_value = mk_result.p
+    is_significant = bool(mk_result.h)
+    slope_per_second = mk_result.slope # This is per unit of t (second)
+
     projected_values = values.copy()
 
     if is_significant:
-        # 2. Calculate Sen's Slope
-        # Sen's slope is usually units per time step.
-        # We need to be careful about time units.
-        # We will calculate slope relative to 'Days' to be precise.
-
-        # Convert dates to Ordinals (Days)
-        date_ordinals = dates.map(pd.Timestamp.toordinal).values
-
-        # Calculate Slope (Change per Day)
-        # Assuming mannks.sens_slope takes (values) or (values, time)
-        # If it only takes values, it assumes unit spacing.
-        slope_per_step = mannks.sens_slope(values)
-
-        # If data is not evenly spaced, we really need a time-aware slope.
-        # If mannks doesn't support time-aware slope, we assume monthly/unit spacing
-        # and project based on index difference.
-
-        # Let's assume unit spacing (index) for safety unless mannks specifies otherwise.
-        # Project to the last index (N-1)
-        n = len(values)
-        indices = np.arange(n)
-        current_index = n - 1
-
-        # Projection Formula:
+        # Projection
         # P_t = V_t + Slope * (Time_Target - Time_t)
-        # If slope is negative (improving), and we are at t=0 (past),
-        # (Target - t) is positive.
-        # P_0 = 100 + (-5) * (10) = 50. Correct.
 
-        projected_values = values + slope_per_step * (current_index - indices)
+        target_time = np.max(date_numerics)
+        time_diffs = target_time - date_numerics
+
+        projected_values = values + slope_per_second * time_diffs
 
         # Physical clamp: Concentration cannot be < 0
         projected_values[projected_values < 0] = 0.0
 
-        slope = slope_per_step
+        # Convert slope to something more readable if needed, but for now we return raw slope
+        # Maybe convert to per day or per year for the return dict for human readability?
+        # The prompt implies returning the slope used.
+        slope = slope_per_second
+
+    else:
+        slope = 0.0
 
     return {
         'projected_data': projected_values,
-        'slope': slope,
+        'slope': slope, # Note: this is slope per SECOND
         'is_significant': is_significant,
-        'p_value': mk_result.p_value
+        'p_value': p_value
     }
