@@ -14,6 +14,11 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
     """
     Calculates the Upper Tolerance Limit (UTL) for compliance and optionally the Probability of Compliance.
 
+    Note:
+        Rows with missing values (NaN) in the `value_col` are dropped prior to analysis.
+        The effective sample size and trend detection are calculated based on the
+        remaining available data points, ignoring the time gaps caused by missing data.
+
     Args:
         df (pd.DataFrame): Input dataframe.
         date_col (str): Column name for dates.
@@ -29,6 +34,10 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
     """
     # 1. Prep
     df = df.sort_values(by=date_col).copy()
+
+    # Drop NaNs from value_col
+    df = df.dropna(subset=[value_col])
+
     dates = pd.to_datetime(df[date_col])
     values = df[value_col].values
     n = len(values)
