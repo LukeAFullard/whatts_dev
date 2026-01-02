@@ -42,8 +42,14 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
     values = df[value_col].values
     n = len(values)
 
+    if n < 5:
+        raise ValueError("Sample size too small (n < 5).")
+
     if n < 10:
-        raise ValueError("Sample size too small (n < 10).")
+        warnings.warn(
+            f"Sample size is very small (n={n}). "
+            "Statistical results may be unstable or uninformative."
+        )
 
     # 2. Project (if enabled)
     slope = 0.0

@@ -6,7 +6,7 @@ A comprehensive deep code audit was performed on the `whatts` repository. The au
 
 **Verdict:** The library is **Methodologically Defensible** and **Accurate**. The core statistical algorithms (Wilson-Hazen, Bayley & Hammersley $N_{eff}$, Sen's Slope) are implemented correctly and align with standard environmental statistics practices.
 
-No critical bugs affecting the accuracy of compliance determinations were found. However, three (3) findings were identified regarding usability, consistency, and minor edge-case handling. Enhancements have been proposed and implemented to improve the "defensibility" of the output in a legal context.
+No critical bugs affecting the accuracy of compliance determinations were found. However, findings were identified regarding usability, consistency, and minor edge-case handling. Enhancements have been proposed and implemented to improve the "defensibility" of the output in a legal context.
 
 ## 2. Methodology Validation
 
@@ -42,8 +42,15 @@ The following statistical components were validated against standard literature 
 *   **Impact:** May slightly overestimate correlation if large gaps exist.
 *   **Defensibility:** This is a documented design choice to enable $N_{eff}$ calculation on sparse datasets. Given the conservative nature of the Bayley & Hammersley method, this is acceptable but should be noted in detailed technical reports.
 
+#### D. Sample Size Limits (Safety)
+*   **Observation:** The external `MannKS` library may fail for extremely small sample sizes ($N < 5$) due to insufficient data for confidence interval calculations.
+*   **Remediation:** The library enforces input validation.
+    *   **Error:** Raises `ValueError` if $N < 5$ (Unsafe).
+    *   **Warning:** Issues `UserWarning` if $5 \le N < 10$ (Statistically weak but computationally safe).
+    *   This "vaccinates" the application against external library crashes.
+
 ## 4. Code Quality & Safety
-*   **Input Validation:** Robust checks for sample size ($N < 10$).
+*   **Input Validation:** Robust checks for sample size.
 *   **Edge Cases:**
     *   **Constant Data:** Handled safely ($N_{eff}=1$).
     *   **Perfect Compliance:** Handled safely (UTL clamped to 1.0).
