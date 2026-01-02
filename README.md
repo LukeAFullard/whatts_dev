@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/Logo.png" alt="whatts logo" width="200"/>
+  <img src="assets/Logo.png" alt="whatts logo" width="600"/>
 </div>
 
 # whatts
