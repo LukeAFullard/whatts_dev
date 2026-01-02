@@ -12,11 +12,11 @@ dependencies = [
     "numpy>=1.21",
     "pandas>=1.3",
     "scipy>=1.7",
-    "mannks"
+    "mannks",
+    "matplotlib"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "matplotlib"
+    "pytest"
 ]
