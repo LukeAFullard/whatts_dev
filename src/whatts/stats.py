@@ -24,10 +24,10 @@ def inverse_hazen(data, value):
     # We use interpolation to find the rank of 'value'
     # Note: np.interp expects x-coordinates to be sorted.
     # Here, data_sorted are the x-coordinates, hazen_ranks are the y-coordinates.
-    rank = np.interp(value, data_sorted, hazen_ranks)
+    # We set left=0.0 and right=1.0 to handle values outside the data range.
+    rank = np.interp(value, data_sorted, hazen_ranks, left=0.0, right=1.0)
 
-    # Clamp rank to [0, 1] just in case
-    return max(0.0, min(1.0, rank))
+    return rank
 
 def calculate_neff_sum_corr(data):
     """
