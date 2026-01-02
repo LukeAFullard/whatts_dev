@@ -47,12 +47,16 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
 
     # 2. Project (if enabled)
     slope = 0.0
+    slope_per_year = 0.0
     is_significant = False
 
     if use_projection:
-        proj_res = project_to_current_state(dates, values)
+        # Pass the confidence level (as alpha) to the trend test for consistency
+        alpha = 1.0 - confidence
+        proj_res = project_to_current_state(dates, values, alpha=alpha)
         analysis_data = proj_res['projected_data']
         slope = proj_res['slope']
+        slope_per_year = proj_res['slope_per_year']
         is_significant = proj_res['is_significant']
     else:
         analysis_data = values
@@ -109,6 +113,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         "n_eff": n_eff,
         "trend_detected": is_significant,
         "trend_slope": slope,
+        "trend_slope_per_year": slope_per_year,
         "probability_of_compliance": compliance_prob,
         "projected_data": analysis_data
     }
@@ -143,7 +148,8 @@ def compare_compliance_methods(df, date_col, value_col, target_percentile=0.95, 
             "Point Estimate": res["point_estimate"],
             "Upper Tolerance Limit": res["upper_tolerance_limit"],
             "N_eff": res["n_eff"],
-            "Trend Slope": res["trend_slope"]
+            "Trend Slope": res["trend_slope"],
+            "Trend Slope (Yearly)": res["trend_slope_per_year"]
         }
 
         if regulatory_limit is not None:
