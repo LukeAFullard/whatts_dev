@@ -122,11 +122,16 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95):
     is_med = (51 <= n <= 100 and dist_from_top <= 3)
 
     if is_small or is_med:
-        # One-sided Chi-Square adjustment for upper bound
-        # The R code used alpha/2 implicitly for 2-sided.
-        # For 1-sided, we use alpha directly.
-        # Note: We use alpha directly as we are doing a one-sided test,
-        # which is more stringent than the two-sided adjustment with alpha.
-        upper_lim = 1.0 - 0.5 * chi2.ppf(alpha, 2 * dist_from_top) / n
+        # Handle perfect compliance (dist_from_top <= 0)
+        # If no failures observed (or implied), the upper bound is 1.0.
+        if dist_from_top <= 0:
+            upper_lim = 1.0
+        else:
+            # One-sided Chi-Square adjustment for upper bound
+            # The R code used alpha/2 implicitly for 2-sided.
+            # For 1-sided, we use alpha directly.
+            # Note: We use alpha directly as we are doing a one-sided test,
+            # which is more stringent than the two-sided adjustment with alpha.
+            upper_lim = 1.0 - 0.5 * chi2.ppf(alpha, 2 * dist_from_top) / n
 
     return min(1.0, upper_lim)
