@@ -1,3 +1,3 @@
-from .core import calculate_compliance
+from .core import calculate_tolerance_limit
 
-__all__ = ["calculate_compliance"]
+__all__ = ["calculate_tolerance_limit"]

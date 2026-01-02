@@ -1,66 +1,80 @@
 import pandas as pd
-import numpy as np
 from .stats import (
     hazen_interpolate,
     calculate_neff_sum_corr,
-    wilson_score_interval_corrected
+    wilson_score_upper_tolerance,
+    inverse_hazen,
+    score_test_probability
 )
 from .utils import project_to_current_state
 
-def calculate_compliance(df, date_col, value_col, target_percentile=0.95):
+def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95, regulatory_limit=None):
     """
-    Main entry point for calculating compliance statistics.
+    Calculates the Upper Tolerance Limit (UTL) for compliance and optionally the Probability of Compliance.
 
     Args:
         df (pd.DataFrame): Input dataframe.
         date_col (str): Column name for dates.
         value_col (str): Column name for values.
         target_percentile (float): The percentile to calculate (default 0.95).
+        confidence (float): Confidence level for the tolerance limit (default 0.95).
+        regulatory_limit (float, optional): The regulatory threshold to compare against.
 
     Returns:
-        dict: Comprehensive results dictionary.
+        dict: Results including the "Compare Value" (UTL) and "Probability of Compliance".
     """
-    # 1. Data Prep
+    # 1. Prep
     df = df.sort_values(by=date_col).copy()
     dates = pd.to_datetime(df[date_col])
     values = df[value_col].values
     n = len(values)
 
     if n < 10:
-        raise ValueError("Sample size too small for reliable analysis (n < 10).")
+        raise ValueError("Sample size too small (n < 10).")
 
-    # 2. Project to Current State
-    projection_result = project_to_current_state(dates, values)
-    analysis_data = projection_result['projected_data']
+    # 2. Project
+    proj_res = project_to_current_state(dates, values)
+    analysis_data = proj_res['projected_data']
 
-    # 3. Calculate Effective Sample Size (n_eff)
-    # We calculate this on the *projected* data (which represents residuals around current state)
+    # 3. Effective Sample Size
     n_eff = calculate_neff_sum_corr(analysis_data)
 
-    # 4. Point Estimate (Hazen)
-    # We look for the 95th percentile concentration
-    point_estimate = hazen_interpolate(analysis_data, target_percentile)
+    # 4. Point Estimate (The "Face Value")
+    point_est = hazen_interpolate(analysis_data, target_percentile)
 
-    # 5. Confidence Interval (Rank Wilson)
-    # A. Get probability bounds
-    p_lower, p_upper = wilson_score_interval_corrected(
+    # 5. Upper Tolerance Limit (The "Regulatory Assurance Value")
+    # Get the probability rank for the UTL
+    utl_rank = wilson_score_upper_tolerance(
         p_hat=target_percentile,
         n=n,
-        n_eff=n_eff
+        n_eff=n_eff,
+        conf_level=confidence
     )
 
-    # B. Map probabilities to concentrations
-    ci_lower_val = hazen_interpolate(analysis_data, p_lower)
-    ci_upper_val = hazen_interpolate(analysis_data, p_upper)
+    # Map rank to value
+    utl_value = hazen_interpolate(analysis_data, utl_rank)
+
+    # 6. Probability of Compliance
+    compliance_prob = None
+    if regulatory_limit is not None:
+        # A. Find where the limit sits in our projected data
+        obs_rank = inverse_hazen(analysis_data, regulatory_limit)
+
+        # B. Calculate probability that True 95th <= Limit
+        compliance_prob = score_test_probability(
+            p_obs=obs_rank,
+            p_null=target_percentile,
+            n_eff=n_eff
+        )
 
     return {
-        "statistic_name": f"{int(target_percentile*100)}th Percentile",
-        "value": point_estimate,
-        "conf_interval": (ci_lower_val, ci_upper_val),
-        "ci_probabilities": (p_lower, p_upper),
+        "statistic": f"{int(target_percentile*100)}th Percentile",
+        "point_estimate": point_est,
+        "upper_tolerance_limit": utl_value,  # THIS is the number to compare to the limit
+        "confidence_level": confidence,
         "n_raw": n,
         "n_eff": n_eff,
-        "trend_significant": projection_result['is_significant'],
-        "trend_slope": projection_result['slope'],
-        "method": "Wilson-Hazen (Corrected) on Projected Data"
+        "trend_detected": proj_res['is_significant'],
+        "trend_slope": proj_res['slope'],
+        "probability_of_compliance": compliance_prob
     }
