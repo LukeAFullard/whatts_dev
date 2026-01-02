@@ -1,4 +1,5 @@
 import pandas as pd
+import warnings
 from .stats import (
     hazen_interpolate,
     calculate_neff_sum_corr,
@@ -8,7 +9,8 @@ from .stats import (
 )
 from .utils import project_to_current_state
 
-def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95, regulatory_limit=None):
+def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95,
+                              regulatory_limit=None, use_projection=True, use_neff=True):
     """
     Calculates the Upper Tolerance Limit (UTL) for compliance and optionally the Probability of Compliance.
 
@@ -19,6 +21,8 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         target_percentile (float): The percentile to calculate (default 0.95).
         confidence (float): Confidence level for the tolerance limit (default 0.95).
         regulatory_limit (float, optional): The regulatory threshold to compare against.
+        use_projection (bool): Whether to project data to current state using trends (default True).
+        use_neff (bool): Whether to adjust for autocorrelation using effective sample size (default True).
 
     Returns:
         dict: Results including the "Compare Value" (UTL) and "Probability of Compliance".
@@ -32,12 +36,32 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
     if n < 10:
         raise ValueError("Sample size too small (n < 10).")
 
-    # 2. Project
-    proj_res = project_to_current_state(dates, values)
-    analysis_data = proj_res['projected_data']
+    # 2. Project (if enabled)
+    slope = 0.0
+    is_significant = False
 
-    # 3. Effective Sample Size
-    n_eff = calculate_neff_sum_corr(analysis_data)
+    if use_projection:
+        proj_res = project_to_current_state(dates, values)
+        analysis_data = proj_res['projected_data']
+        slope = proj_res['slope']
+        is_significant = proj_res['is_significant']
+    else:
+        analysis_data = values
+        # Default slope 0, is_significant False
+
+    # 3. Effective Sample Size (if enabled)
+    if use_neff:
+        n_eff = calculate_neff_sum_corr(analysis_data)
+
+        # Minimum Record Length Warning
+        if n_eff < 10:
+            warnings.warn(
+                f"Effective Sample Size is extremely low ({n_eff:.1f}). "
+                "Compliance results will have very wide confidence intervals "
+                "and may be uninformative."
+            )
+    else:
+        n_eff = float(n)
 
     # 4. Point Estimate (The "Face Value")
     point_est = hazen_interpolate(analysis_data, target_percentile)
@@ -74,7 +98,48 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         "confidence_level": confidence,
         "n_raw": n,
         "n_eff": n_eff,
-        "trend_detected": proj_res['is_significant'],
-        "trend_slope": proj_res['slope'],
-        "probability_of_compliance": compliance_prob
+        "trend_detected": is_significant,
+        "trend_slope": slope,
+        "probability_of_compliance": compliance_prob,
+        "projected_data": analysis_data
     }
+
+def compare_compliance_methods(df, date_col, value_col, target_percentile=0.95, confidence=0.95, regulatory_limit=None):
+    """
+    Runs the assessment three ways:
+    1. Naive: Raw data, Standard Wilson-Hazen (use_projection=False, use_neff=False)
+    2. Detrended Only: Projected data, Standard Wilson-Hazen (use_projection=True, use_neff=False)
+    3. Full whatts: Projected data + n_eff correction (use_projection=True, use_neff=True)
+
+    Returns:
+        pd.DataFrame: A comparison table.
+    """
+
+    scenarios = [
+        {"name": "Naive", "use_projection": False, "use_neff": False},
+        {"name": "Detrended Only", "use_projection": True, "use_neff": False},
+        {"name": "Full whatts", "use_projection": True, "use_neff": True},
+    ]
+
+    results = []
+
+    for sc in scenarios:
+        res = calculate_tolerance_limit(
+            df, date_col, value_col, target_percentile, confidence, regulatory_limit,
+            use_projection=sc["use_projection"], use_neff=sc["use_neff"]
+        )
+
+        row = {
+            "Method": sc["name"],
+            "Point Estimate": res["point_estimate"],
+            "Upper Tolerance Limit": res["upper_tolerance_limit"],
+            "N_eff": res["n_eff"],
+            "Trend Slope": res["trend_slope"]
+        }
+
+        if regulatory_limit is not None:
+            row["Probability of Compliance"] = res["probability_of_compliance"]
+
+        results.append(row)
+
+    return pd.DataFrame(results)
