@@ -2,16 +2,26 @@ import pandas as pd
 from .stats import (
     hazen_interpolate,
     calculate_neff_sum_corr,
-    wilson_score_upper_tolerance
+    wilson_score_upper_tolerance,
+    inverse_hazen,
+    score_test_probability
 )
 from .utils import project_to_current_state
 
-def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95):
+def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95, regulatory_limit=None):
     """
-    Calculates the Upper Tolerance Limit (UTL) for compliance.
+    Calculates the Upper Tolerance Limit (UTL) for compliance and optionally the Probability of Compliance.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+        date_col (str): Column name for dates.
+        value_col (str): Column name for values.
+        target_percentile (float): The percentile to calculate (default 0.95).
+        confidence (float): Confidence level for the tolerance limit (default 0.95).
+        regulatory_limit (float, optional): The regulatory threshold to compare against.
 
     Returns:
-        dict: Results including the "Compare Value" (UTL).
+        dict: Results including the "Compare Value" (UTL) and "Probability of Compliance".
     """
     # 1. Prep
     df = df.sort_values(by=date_col).copy()
@@ -44,6 +54,19 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
     # Map rank to value
     utl_value = hazen_interpolate(analysis_data, utl_rank)
 
+    # 6. Probability of Compliance
+    compliance_prob = None
+    if regulatory_limit is not None:
+        # A. Find where the limit sits in our projected data
+        obs_rank = inverse_hazen(analysis_data, regulatory_limit)
+
+        # B. Calculate probability that True 95th <= Limit
+        compliance_prob = score_test_probability(
+            p_obs=obs_rank,
+            p_null=target_percentile,
+            n_eff=n_eff
+        )
+
     return {
         "statistic": f"{int(target_percentile*100)}th Percentile",
         "point_estimate": point_est,
@@ -52,5 +75,6 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         "n_raw": n,
         "n_eff": n_eff,
         "trend_detected": proj_res['is_significant'],
-        "trend_slope": proj_res['slope']
+        "trend_slope": proj_res['slope'],
+        "probability_of_compliance": compliance_prob
     }

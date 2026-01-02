@@ -10,6 +10,25 @@ def hazen_interpolate(data, target_rank):
     hazen_ranks = (np.arange(1, n + 1) - 0.5) / n
     return np.interp(target_rank, hazen_ranks, data_sorted)
 
+def inverse_hazen(data, value):
+    """
+    Finds the percentile rank (0 to 1) of a specific value within the data
+    using Hazen plotting positions.
+    """
+    data_sorted = np.sort(data)
+    n = len(data)
+
+    # Hazen ranks for the sorted data
+    hazen_ranks = (np.arange(1, n + 1) - 0.5) / n
+
+    # We use interpolation to find the rank of 'value'
+    # Note: np.interp expects x-coordinates to be sorted.
+    # Here, data_sorted are the x-coordinates, hazen_ranks are the y-coordinates.
+    rank = np.interp(value, data_sorted, hazen_ranks)
+
+    # Clamp rank to [0, 1] just in case
+    return max(0.0, min(1.0, rank))
+
 def calculate_neff_sum_corr(data):
     """
     Calculates Effective Sample Size (n_eff) using Sum of Correlations.
@@ -30,6 +49,35 @@ def calculate_neff_sum_corr(data):
 
     n_eff = n / (1 + 2 * sum_rho)
     return max(2.0, min(float(n), n_eff))
+
+def score_test_probability(p_obs, p_null, n_eff):
+    """
+    Calculates the one-sided probability that the true proportion is <= p_null
+    given an observed proportion p_obs.
+
+    This is the direct counterpart to the Wilson Interval.
+
+    Args:
+        p_obs (float): The rank of the target value in the observed data.
+        p_null (float): The regulatory target percentile (usually 0.95).
+        n_eff (float): Effective sample size.
+
+    Returns:
+        float: Probability of compliance (0.0 to 1.0).
+    """
+    # Prevent division by zero if n_eff is weird
+    if n_eff <= 0: return 0.0
+
+    # Variance under the Null Hypothesis (Score Test standard)
+    # This matches the Wilson Interval geometry.
+    variance = (p_null * (1 - p_null)) / n_eff
+
+    # Z-score calculation
+    # Z = (Observed - Null) / StdDev
+    z_score = (p_obs - p_null) / np.sqrt(variance)
+
+    # Convert Z to probability (Cumulative Distribution Function)
+    return norm.cdf(z_score)
 
 def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95):
     """

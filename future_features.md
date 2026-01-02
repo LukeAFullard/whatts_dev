@@ -88,3 +88,55 @@ if n_eff < 10:
 ```
 
 This manages expectations before the user sees a confidence interval that spans from 0 to Infinity.
+
+### 4. Communication & Interpretation Guide
+
+In environmental law, words like "Probability" and "Risk" have specific legal meanings. If you say "There is an 87% probability of compliance," a layperson hears "87% of the time the water is clean." **This is incorrect.**
+
+You are calculating the **confidence in a statistic**, not the frequency of clean water.
+
+Here is your "Style Guide" for accurately communicating the outputs of `whatts`.
+
+#### The "Golden Rule" of Interpretation
+
+**Never say:** *"There is an 87% chance the site is compliant."*
+(This sounds like a gamble or a weather forecast).
+
+**Always say:** *"We are **87% confident** that the true 95th percentile is below the regulatory limit."*
+(This emphasizes that the uncertainty lies in our *knowledge* of the system, not just the system itself).
+
+#### The "Traffic Light" Classification System
+
+To make this usable for managers without losing rigor, I recommend mapping the continuous probability score to discrete "Confidence Categories."
+
+| Probability Score | Interpretation | Regulatory Status | Recommended Wording |
+| --- | --- | --- | --- |
+| **> 95%** | **High Confidence Compliance** | **PASS** | "The site meets the target. We have high statistical confidence (>95%) that the current 95th percentile is below the limit." |
+| **50% – 95%** | **Indeterminate (Likely Compliant)** | **ALERT / CHECK** | "The best estimate suggests the site meets the target, but due to sampling uncertainty (N_eff), we cannot confirm this with 95% confidence. Continued monitoring is required." |
+| **5% – 50%** | **Indeterminate (Likely Failing)** | **ALERT / FAIL** | "The best estimate suggests the site exceeds the target. While statistical confidence is low (<95%), the risk of non-compliance is elevated." |
+| **< 5%** | **High Confidence Failure** | **FAIL** | "The site fails to meet the target. We have high statistical confidence (>95%) that the current 95th percentile exceeds the limit." |
+
+#### "Do Not Say" – The Forbidden Phrases
+
+| ❌ **Don't Say This** | ✅ **Say This Instead** | **Why?** |
+| --- | --- | --- |
+| "The site is safe 87% of the time." | "We are 87% confident the 95th percentile is safe." | The 95th percentile *already* allows for 5% exceedance. You are measuring the error bar on the percentile, not the water itself. |
+| "The trend proves the water is better." | "Projection analysis indicates the water quality has likely improved..." | Trends are estimates, not proofs. "Indicates" or "suggests" is safer than "proves." |
+| "The sample size was too small." | "The *Effective Sample Size ($n_{eff}$)* was reduced due to autocorrelation..." | "Too small" sounds like you made a mistake. "Reduced due to autocorrelation" places the blame on the *river's physics*, not the sampler. |
+
+#### Boilerplate Text for your Reports
+
+Here is a standard paragraph you can drop into your executive summary. It is legally defensive and statistically accurate:
+
+> **Assessment Methodology:**
+> Compliance was assessed using the `whatts` framework (Wilson-Hazen for Autocorrelated Trending Time Series). This method projects historical data to the current date to account for observed trends (Sen’s Slope) and adjusts confidence intervals to account for the redundancy inherent in serial monitoring data (Effective Sample Size, $n_{eff}$).
+> **Statistical Interpretation:**
+> The "Confidence of Compliance" reported below represents the statistical probability that the true 95th percentile of the current state distribution is less than or equal to the regulatory limit. A value of 95% or higher is required to meet the definition of "High Confidence Compliance" typically required for regulatory assurance.
+
+#### A Visual Analogy for Clients
+
+When a client asks, *"Why is my confidence only 80%? The point is below the line!"*, use the **"Blurry Photo"** analogy:
+
+> "Imagine the regulatory limit is a finish line. We took a photo of your runner (the 95th percentile) crossing the line.
+> Because of the trend and the correlation, the photo is **blurry** (wide confidence interval).
+> In the blurry photo, your runner *looks* like they are ahead of the line (Point Estimate < Limit). But the blur overlaps the line. The '80%' means that based on this blurry photo, there is still a 20% chance that the runner's nose was actually behind the line. We need a clearer photo (more samples) or a faster runner (better improvement) to be sure."
