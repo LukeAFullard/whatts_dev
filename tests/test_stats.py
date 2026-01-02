@@ -70,7 +70,8 @@ class TestStats(unittest.TestCase):
 
         # Highly correlated data (constant)
         data_const = np.ones(100)
-        self.assertEqual(calculate_neff_sum_corr(data_const), 100.0)
+        # FIX: Constant data implies 1 effective sample repeated N times.
+        self.assertEqual(calculate_neff_sum_corr(data_const), 1.0)
 
 if __name__ == '__main__':
     unittest.main()

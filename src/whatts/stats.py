@@ -39,7 +39,10 @@ def calculate_neff_sum_corr(data):
 
     y = data - np.mean(data)
     var = np.var(y)
-    if var == 0: return float(n)
+
+    # FIX: If variance is 0 (constant data), information is minimal.
+    # Return 1.0 to represent a single effective observation.
+    if var == 0: return 1.0
 
     sum_rho = 0.0
     for k in range(1, int(n / 2)):
@@ -85,7 +88,7 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95):
 
     Args:
         p_hat (float): The target percentile (e.g., 0.95).
-        n (int): Raw sample size (for boundary corrections).
+        n (int): Raw sample size (kept for API compatibility, but n_eff is used for logic).
         n_eff (float): Effective sample size (for variance).
         conf_level (float): Confidence level (default 0.95).
 
@@ -93,7 +96,7 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95):
         float: The probability rank corresponding to the Upper Tolerance Limit.
     """
     if n_eff is None:
-        n_eff = n
+        n_eff = float(n)
 
     alpha = 1 - conf_level
 
@@ -114,12 +117,16 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95):
     # --- Boundary Corrections (One-Sided Logic) ---
     # We apply the Chi-Square correction if the sample size is small
     # and we are close to the boundary.
-    x = p_hat * n
-    dist_from_top = n - x
+
+    # FIX: Use n_eff for boundary logic to account for autocorrelation.
+    x_eff = p_hat * n_eff
+    dist_from_top = n_eff - x_eff
 
     # Logic adapted from R 'binom.CI' but specific to Upper Limit
-    is_small = (n <= 50 and dist_from_top <= 2)
-    is_med = (51 <= n <= 100 and dist_from_top <= 3)
+    # and adapted for Effective Sample Size.
+    is_small = (n_eff <= 50 and dist_from_top <= 2)
+    # FIX: Ensure no gap between 50 and 51 for float n_eff
+    is_med = (50 < n_eff <= 100 and dist_from_top <= 3)
 
     if is_small or is_med:
         # Handle perfect compliance (dist_from_top <= 0)
@@ -128,10 +135,7 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95):
             upper_lim = 1.0
         else:
             # One-sided Chi-Square adjustment for upper bound
-            # The R code used alpha/2 implicitly for 2-sided.
-            # For 1-sided, we use alpha directly.
-            # Note: We use alpha directly as we are doing a one-sided test,
-            # which is more stringent than the two-sided adjustment with alpha.
-            upper_lim = 1.0 - 0.5 * chi2.ppf(alpha, 2 * dist_from_top) / n
+            # FIX: Use n_eff in denominator.
+            upper_lim = 1.0 - 0.5 * chi2.ppf(alpha, 2 * dist_from_top) / n_eff
 
     return min(1.0, upper_lim)
