@@ -62,7 +62,7 @@ def score_test_probability(p_obs, p_null, n_eff):
 
     Args:
         p_obs (float): The rank of the target value in the observed data.
-        p_null (float): The regulatory target percentile (usually 0.95).
+        p_null (float): The regulatory target percentile (e.g., 0.95).
         n_eff (float): Effective sample size.
 
     Returns:
