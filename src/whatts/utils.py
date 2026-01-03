@@ -2,14 +2,20 @@ import numpy as np
 import pandas as pd
 import MannKS  # The external dependency (Package name is mannks, but module is MannKS)
 
-def project_to_current_state(dates, values, alpha=0.05):
+def project_to_current_state(dates, values, alpha=0.05, target_date=None):
     """
-    Detects trend and projects data to the current (max) date.
+    Detects trend and projects data to the current (max) date or a specified target date.
 
     Args:
         dates (pd.Series): Datetime objects.
         values (np.array): Numeric values.
         alpha (float): Significance level for trend detection (default 0.05).
+        target_date (datetime-like or str, optional): The date to project the values to.
+            Defaults to the maximum date in the 'dates' series.
+            Supported string aliases:
+            - "start": Projects to the minimum date in the series.
+            - "end" / "max" / "current": Projects to the maximum date.
+            - "middle" / "center": Projects to the midpoint between min and max dates.
 
     Returns:
         dict: {
@@ -47,7 +53,26 @@ def project_to_current_state(dates, values, alpha=0.05):
         # Projection
         # P_t = V_t + Slope * (Time_Target - Time_t)
 
-        target_time = np.max(date_numerics)
+        min_time = np.min(date_numerics)
+        max_time = np.max(date_numerics)
+
+        if target_date is not None:
+            if isinstance(target_date, str):
+                target_date_lower = target_date.lower().strip()
+                if target_date_lower == "start":
+                    target_time = min_time
+                elif target_date_lower in ["end", "max", "current"]:
+                    target_time = max_time
+                elif target_date_lower in ["middle", "center"]:
+                    target_time = min_time + (max_time - min_time) / 2.0
+                else:
+                    # Try to parse string as date
+                    target_time = pd.Timestamp(target_date).timestamp()
+            else:
+                target_time = pd.Timestamp(target_date).timestamp()
+        else:
+            target_time = max_time
+
         time_diffs = target_time - date_numerics
 
         projected_values = values + slope_per_second * time_diffs
