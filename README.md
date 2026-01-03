@@ -60,6 +60,7 @@ pip install whatts
 *   **One-Sided Tolerance Limits:** Calculates the **Upper Tolerance Limit (UTL)**, providing a defensible "ceiling" for compliance assessments.
 *   **Probability of Compliance:** Estimates the statistical confidence (0–100%) that a site meets a regulatory limit using the **Score Test**.
 *   **Defensible:** Built on standard environmental statistics methods (Wilson Score Interval, Hazen Plotting Position). Validated in `AUDIT_REPORT.md`.
+*   **Two Methods:** Choose between the standard **Trend Projection** (default) or **Quantile Regression (QR)** for rigorous tail modeling.
 
 ## 📖 Usage Guide
 
@@ -76,7 +77,9 @@ result = calculate_tolerance_limit(
     value_col="Value",
     target_percentile=0.95, # The percentile you need to control (default 0.95)
     confidence=0.95,        # The statistical confidence level (default 0.95)
-    regulatory_limit=540    # Optional: The numeric limit to check against
+    regulatory_limit=540,   # Optional: The numeric limit to check against
+    method='projection',    # 'projection' (default) or 'quantile_regression'
+    projection_target_date='end' # 'end' (default), 'middle', 'start', or specific date
 )
 ```
 
@@ -117,6 +120,23 @@ table = compare_compliance_methods(df, "Date", "Value", regulatory_limit=540)
 print(table)
 ```
 *This returns a DataFrame comparing "Naive" (raw data), "Detrended Only", and "Full whatts" methods.*
+
+### 4. Advanced: Quantile Regression
+
+For data with complex autocorrelation or when you want to model the trend of the 95th percentile directly (rather than the mean), use the **Quantile Regression (QR)** method.
+
+*   **Algorithm:** Uses Quantile Regression with **Moving Block Bootstrap** (MBB) to generate confidence intervals that respect the time-structure of the data.
+*   **Use Case:** Highly autocorrelated rivers or when the variance is changing over time.
+*   **Requires:** `statsmodels` package.
+
+```python
+# Use QR Method
+result_qr = calculate_tolerance_limit(
+    df, "Date", "Value",
+    method='quantile_regression',
+    projection_target_date='end' # Project trend to the final date
+)
+```
 
 ## 🚦 Communication & Interpretation
 
