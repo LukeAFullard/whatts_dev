@@ -60,7 +60,8 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         qr_res = fit_qr_current_state(
             dates, values,
             target_percentile=target_percentile,
-            confidence=confidence
+            confidence=confidence,
+            target_date=projection_target_date
         )
 
         return {

@@ -3,10 +3,19 @@ import pandas as pd
 import statsmodels.api as sm
 from .bootstrap import generate_block_bootstraps
 
-def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95):
+def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95, target_date=None):
     """
     Fits Quantile Regression and estimates the Current State (final date)
     using Block Bootstrapping for uncertainty.
+
+    Args:
+        dates (pd.Series): Datetime objects.
+        values (np.array): Numeric values.
+        target_percentile (float): The quantile to fit (default 0.95).
+        confidence (float): Confidence level for the UTL (default 0.95).
+        target_date (datetime-like or str, optional): The date/point to predict at.
+            Defaults to the maximum date (end of series).
+            Supports aliases: "start", "middle", "end".
 
     Returns:
         dict: {
@@ -22,8 +31,29 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95)
     t_numeric = (dates - t_start).dt.days.values # X variable
     y = values # Y variable
 
-    # Target date for prediction (The "Current State")
-    t_final = t_numeric.max()
+    # Resolve Target Date
+    # Note: t_numeric is in days relative to t_start (0 to max)
+    max_days = t_numeric.max()
+    min_days = 0.0
+
+    if target_date is not None:
+        if isinstance(target_date, str):
+            target_date_lower = target_date.lower().strip()
+            if target_date_lower == "start":
+                t_final = min_days
+            elif target_date_lower in ["end", "max", "current"]:
+                t_final = max_days
+            elif target_date_lower in ["middle", "center"]:
+                t_final = (min_days + max_days) / 2.0
+            else:
+                # Try to parse string as date
+                target_ts = pd.Timestamp(target_date)
+                t_final = (target_ts - t_start).days
+        else:
+            target_ts = pd.Timestamp(target_date)
+            t_final = (target_ts - t_start).days
+    else:
+        t_final = max_days
 
     # 2. Fit Point Estimate (The "Face Value")
     # Add constant for intercept: y = a + bx

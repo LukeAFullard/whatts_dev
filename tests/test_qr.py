@@ -82,3 +82,41 @@ class TestQR:
 
         with pytest.raises(ValueError, match="Unknown method"):
             calculate_tolerance_limit(df, 'date', 'value', method='magic_crystal_ball')
+
+    def test_qr_target_date(self):
+        """
+        Verifies that QR projection respects the target_date argument.
+        """
+        n = 50
+        dates = pd.date_range(start='2023-01-01', periods=n, freq='D')
+
+        # Positive trend: 10 to 20
+        values = np.linspace(10, 20, n)
+        # Minimal noise
+        np.random.seed(999)
+        values += np.random.normal(0, 0.1, n)
+
+        df = pd.DataFrame({'date': dates, 'value': values})
+
+        # 1. Target = Start (should be around 10)
+        res_start = calculate_tolerance_limit(
+            df, 'date', 'value',
+            method='quantile_regression',
+            projection_target_date="start"
+        )
+
+        # 2. Target = End (should be around 20)
+        res_end = calculate_tolerance_limit(
+            df, 'date', 'value',
+            method='quantile_regression',
+            projection_target_date="end"
+        )
+
+        # The point estimate for "start" should be significantly lower than "end"
+        assert res_start['point_estimate'] < res_end['point_estimate']
+
+        # Start estimate ~ 10 + epsilon
+        assert 9.0 < res_start['point_estimate'] < 12.0
+
+        # End estimate ~ 20 + epsilon
+        assert 19.0 < res_end['point_estimate'] < 22.0
