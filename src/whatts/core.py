@@ -10,7 +10,8 @@ from .stats import (
 from .utils import project_to_current_state
 
 def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95,
-                              regulatory_limit=None, use_projection=True, use_neff=True):
+                              regulatory_limit=None, use_projection=True, use_neff=True,
+                              projection_target_date=None):
     """
     Calculates the Upper Tolerance Limit (UTL) for compliance and optionally the Probability of Compliance.
 
@@ -28,6 +29,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         regulatory_limit (float, optional): The regulatory threshold to compare against.
         use_projection (bool): Whether to project data to current state using trends (default True).
         use_neff (bool): Whether to adjust for autocorrelation using effective sample size (default True).
+        projection_target_date (datetime-like, optional): Date to project the trend to (default is max date).
 
     Returns:
         dict: Results including the "Compare Value" (UTL) and "Probability of Compliance".
@@ -59,7 +61,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
     if use_projection:
         # Pass the confidence level (as alpha) to the trend test for consistency
         alpha = 1.0 - confidence
-        proj_res = project_to_current_state(dates, values, alpha=alpha)
+        proj_res = project_to_current_state(dates, values, alpha=alpha, target_date=projection_target_date)
         analysis_data = proj_res['projected_data']
         slope = proj_res['slope']
         slope_per_year = proj_res['slope_per_year']
@@ -125,7 +127,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         "projected_data": analysis_data
     }
 
-def compare_compliance_methods(df, date_col, value_col, target_percentile=0.95, confidence=0.95, regulatory_limit=None):
+def compare_compliance_methods(df, date_col, value_col, target_percentile=0.95, confidence=0.95, regulatory_limit=None, projection_target_date=None):
     """
     Runs the assessment three ways:
     1. Naive: Raw data, Standard Wilson-Hazen (use_projection=False, use_neff=False)
@@ -147,7 +149,8 @@ def compare_compliance_methods(df, date_col, value_col, target_percentile=0.95, 
     for sc in scenarios:
         res = calculate_tolerance_limit(
             df, date_col, value_col, target_percentile, confidence, regulatory_limit,
-            use_projection=sc["use_projection"], use_neff=sc["use_neff"]
+            use_projection=sc["use_projection"], use_neff=sc["use_neff"],
+            projection_target_date=projection_target_date
         )
 
         row = {
