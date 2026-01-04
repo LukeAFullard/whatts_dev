@@ -46,6 +46,7 @@ def project_to_current_state(dates, values, alpha=0.05, target_date=None):
     p_value = mk_result.p
     is_significant = bool(mk_result.h)
     slope_per_second = mk_result.slope # This is per unit of t (second)
+    tau = mk_result.Tau
 
     projected_values = values.copy()
 
@@ -95,5 +96,6 @@ def project_to_current_state(dates, values, alpha=0.05, target_date=None):
         'slope': slope, # Note: this is slope per SECOND
         'slope_per_year': slope_per_year,
         'is_significant': is_significant,
-        'p_value': p_value
+        'p_value': p_value,
+        'tau': tau
     }

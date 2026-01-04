@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import warnings
 from .stats import (
     hazen_interpolate,
@@ -12,7 +13,7 @@ from .qr import fit_qr_current_state
 
 def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95,
                               regulatory_limit=None, use_projection=True, use_neff=True,
-                              projection_target_date=None, method='projection'):
+                              projection_target_date=None, method='projection', seasonal_period=None):
     """
     Calculates the Upper Tolerance Limit (UTL) for compliance and optionally the Probability of Compliance.
 
@@ -32,12 +33,19 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         use_neff (bool): Whether to adjust for autocorrelation using effective sample size (default True).
         projection_target_date (datetime-like, optional): Date to project the trend to (default is max date).
         method (str): 'projection' (default) or 'quantile_regression'.
+        seasonal_period (int): Optional minimum block size to respect seasonality (used in QR method).
 
     Returns:
         dict: Results including the "Compare Value" (UTL) and "Probability of Compliance".
+              Also includes trend statistics 'tau' and 'p_value' if using 'projection' method.
     """
     # 1. Prep
     df = df.sort_values(by=date_col).copy()
+
+    # Check for missing values
+    missing_pct = df[value_col].isna().mean()
+    if missing_pct > 0.3:
+        warnings.warn(f"{missing_pct:.1%} of rows dropped due to missing values. Results may be unreliable.")
 
     # Drop NaNs from value_col
     df = df.dropna(subset=[value_col])
@@ -45,6 +53,10 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
     dates = pd.to_datetime(df[date_col])
     values = df[value_col].values
     n = len(values)
+
+    # Check for constant data (zero variance)
+    if n > 1 and np.std(values) == 0:
+        warnings.warn("Data has zero variance. Percentile estimates are uninformative.")
 
     if n < 5:
         raise ValueError("Sample size too small (n < 5).")
@@ -61,7 +73,8 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             dates, values,
             target_percentile=target_percentile,
             confidence=confidence,
-            target_date=projection_target_date
+            target_date=projection_target_date,
+            seasonal_period=seasonal_period
         )
 
         return {
@@ -97,9 +110,14 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             slope = proj_res['slope']
             slope_per_year = proj_res['slope_per_year']
             is_significant = proj_res['is_significant']
+            # Extract additional metrics
+            tau = proj_res['tau']
+            p_value = proj_res['p_value']
         else:
             analysis_data = values
             # Default slope 0, is_significant False
+            tau = None
+            p_value = None
 
         # 3. Effective Sample Size (if enabled)
         if use_neff:
@@ -155,7 +173,9 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             "trend_slope": slope,
             "trend_slope_per_year": slope_per_year,
             "probability_of_compliance": compliance_prob,
-            "projected_data": analysis_data
+            "projected_data": analysis_data,
+            "tau": tau,
+            "p_value": p_value
         }
     else:
         raise ValueError(f"Unknown method: {method}")
