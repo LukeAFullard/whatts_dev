@@ -162,27 +162,33 @@ def wilson_score_interval(p_hat, n, n_eff=None, conf_level=0.95, sides=2,
     dist_from_top = n_eff * (1 - p_hat)
 
     # Expanded Chi-Square Logic:
-    is_small = (n_eff <= small_n_threshold and dist_from_top <= distance_threshold)
-    is_med = (small_n_threshold < n_eff <= medium_n_threshold and dist_from_top <= distance_threshold)
+
+    # 1. Upper Bound Logic
+    is_small_top = (n_eff <= small_n_threshold and dist_from_top <= distance_threshold)
+    is_med_top = (small_n_threshold < n_eff <= medium_n_threshold and dist_from_top <= distance_threshold)
 
     method_used = "Standard Wilson-Hazen"
 
-    if is_small or is_med:
+    if is_small_top or is_med_top:
         method_used = "Chi-Square Correction"
-        # Handle perfect compliance (dist_from_top <= 0)
-        # If no failures observed (or implied), the upper bound is 1.0.
         if dist_from_top <= 0:
             upper_lim = 1.0
         else:
-            # Chi-Square adjustment for upper bound.
-            # Using alpha_tail ensures consistency with sides parameter.
-            # For 2-sided 95% (alpha=0.05), alpha_tail=0.025. We want the 97.5th percentile.
-            # chi2.ppf(0.025) is smaller than chi2.ppf(0.05).
-            # 1.0 - small is larger (closer to 1). Correct.
+            # Chi-Square adjustment for upper bound
             upper_lim = 1.0 - 0.5 * chi2.ppf(alpha_tail, 2 * dist_from_top) / n_eff
 
-    # TODO: Implement similar correction for lower bound if needed,
-    # but currently only Upper Limit correction is specified.
+    # 2. Lower Bound Logic
+    dist_from_bottom = n_eff * p_hat
+    is_small_bot = (n_eff <= small_n_threshold and dist_from_bottom <= distance_threshold)
+    is_med_bot = (small_n_threshold < n_eff <= medium_n_threshold and dist_from_bottom <= distance_threshold)
+
+    if is_small_bot or is_med_bot:
+        method_used = "Chi-Square Correction" # Flag if either triggered
+        if dist_from_bottom <= 0:
+            lower_lim = 0.0
+        else:
+            # Chi-Square adjustment for lower bound
+            lower_lim = 0.5 * chi2.ppf(alpha_tail, 2 * dist_from_bottom) / n_eff
 
     return max(0.0, lower_lim), min(1.0, upper_lim), method_used
 
