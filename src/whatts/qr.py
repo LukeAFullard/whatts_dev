@@ -3,7 +3,7 @@ import pandas as pd
 import statsmodels.api as sm
 from .bootstrap import generate_block_bootstraps
 
-def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95, target_date=None):
+def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95, target_date=None, seasonal_period=None):
     """
     Fits Quantile Regression and estimates the Current State (final date)
     using Block Bootstrapping for uncertainty.
@@ -16,6 +16,7 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95,
         target_date (datetime-like or str, optional): The date/point to predict at.
             Defaults to the maximum date (end of series).
             Supports aliases: "start", "middle", "end".
+        seasonal_period (int): Optional minimum block size to respect seasonality.
 
     Returns:
         dict: {
@@ -72,7 +73,7 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95,
     bootstrap_preds = []
 
     # Create generator
-    boot_gen = generate_block_bootstraps(y, t_numeric, n_boot=1000)
+    boot_gen = generate_block_bootstraps(y, t_numeric, n_boot=1000, seasonal_period=seasonal_period)
 
     for y_boot, x_boot in boot_gen:
         try:

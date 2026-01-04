@@ -1,6 +1,6 @@
 import numpy as np
 
-def generate_block_bootstraps(values, dates, n_boot=2000, block_size=None):
+def generate_block_bootstraps(values, dates, n_boot=2000, block_size=None, seasonal_period=None):
     """
     Generates synthetic datasets using Moving Block Bootstrap (MBB).
 
@@ -9,6 +9,7 @@ def generate_block_bootstraps(values, dates, n_boot=2000, block_size=None):
         dates (np.array): The ordinal dates (X-axis).
         n_boot (int): Number of bootstrap iterations.
         block_size (int): Length of blocks. If None, uses n^(1/3) heuristic.
+        seasonal_period (int): Optional minimum block size to respect seasonality.
 
     Yields:
         tuple: (resampled_values, resampled_dates)
@@ -19,6 +20,10 @@ def generate_block_bootstraps(values, dates, n_boot=2000, block_size=None):
     # (Common rule of thumb for preserving stationarity within blocks)
     if block_size is None:
         block_size = int(np.cbrt(n))
+
+        if seasonal_period is not None:
+             block_size = max(block_size, int(seasonal_period))
+
         block_size = max(2, block_size) # At least pairs
 
     # We use Circular Block Bootstrap logic for simplicity (wrapping around)
