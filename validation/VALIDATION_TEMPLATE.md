@@ -1,96 +1,53 @@
-# Validation: [Test Case Name]
+# Validation Case: [V-XX_Name]
 
-## 1. Test Description
+## 1. Objective
 **What is being tested:**
-[Brief description of the specific scenario, feature, or edge case being validated. E.g., "Detection of a +2σ immediate step change with strong seasonality."]
+[Brief description of the specific scenario, e.g., "Verify coverage for small sample sizes (N=30)."]
 
 **Category:**
-[E.g., Effect Morphology, Statistical Challenge, Data Quality, etc.]
+[E.g., Baseline Performance, Sample Size Sensitivity, Trend Handling, etc.]
 
 ## 2. Rationale
 **Why this test is important:**
-[Explanation of why this validation is necessary. E.g., "To ensure the detector can distinguish a moderate signal from strong background seasonality, mimicking common environmental intervention scenarios."]
+[Explanation of why this validation is necessary. E.g., "Small sample sizes are common in monitoring data; we must ensure the method remains conservative."]
 
-## 3. Success Criteria
-**Expected Outcome for Pass:**
-[Specific, measurable criteria that must be met to consider the test a pass.]
-- [ ] **Detection:** [E.g., P-value < 0.05, Effect detected]
-- [ ] **Accuracy:** [E.g., Estimated effect size within 10% of true value]
-- [ ] **False Positives:** [E.g., No detection in placebo period]
-- [ ] **Diagnostics:** [E.g., No warnings triggered, or specific warning triggered]
-- [ ] **Robustness:** [E.g., Result robust across >80% of sensitivity specifications]
+## 3. Data Generation Parameters
+**Configuration:**
+*   **Sample Size ($N$):** [e.g., 30]
+*   **Distribution:** [e.g., Normal, Lognormal, Gamma]
+*   **Trend:** [e.g., None, Linear Up (slope=0.05), Step Change]
+*   **Autocorrelation ($\rho$):** [e.g., 0.0, 0.6]
+*   **Target Percentile:** [e.g., 0.95]
+*   **Iterations:** [e.g., 1000]
 
-## 4. Data Generation
-**Data Characteristics:**
-- **History Length:** [E.g., 10 years]
-- **Seasonality:** [E.g., Sine wave amplitude 5.0]
-- **Noise:** [E.g., White noise sigma 1.0]
-- **Treatment:** [E.g., Additive step +2.0 starting at T=0]
-- **Gaps/Issues:** [E.g., None, or specific missing data pattern]
+## 4. Methodology
+**Execution Strategy:**
+This test runs a Monte Carlo simulation using the script in this folder (`run_test.py`).
+1.  Generate synthetic data based on the parameters above.
+2.  Apply `whatts` methods:
+    *   **Projection:** Wilson-Hazen with Detrending.
+    *   **Quantile Regression:** Moving Block Bootstrap.
+3.  Calculate **Actual Coverage**: The proportion of simulations where the calculated UTL exceeds the true underlying percentile.
+4.  Compare against **Target Coverage** (confidence level).
 
-## 5. Validation Code
-**Step-by-Step Implementation:**
+## 5. Success Criteria
+**Pass/Fail Definition:**
+A method passes if the **Actual Coverage** is within **±3%** of the **Target Coverage** (e.g., for 95% confidence, coverage must be between 92% and 98%).
 
-```python
-import pandas as pd
-import numpy as np
-# Import your package modules here
-# from whatts import ...
-import matplotlib.pyplot as plt
+*   **PASS:** $|Actual - Target| \le 0.03$
+*   **FAIL:** $|Actual - Target| > 0.03$
 
-# 1. Setup Configuration
-# [Explain choice of parameters]
+## 6. Results Summary
+*Note: These results are automatically appended to `validation/master_results.csv`.*
 
-# 2. Generate Synthetic Data
-# [Code to generate the dataframe]
-# df = ...
+| Method | Iterations | Target Coverage | Actual Coverage | Avg Width | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Projection** | [N] | [0.XX] | [0.XX] | [X.XX] | [PASS/FAIL] |
+| **Quantile Regression** | [N] | [0.XX] | [0.XX] | [X.XX] | [PASS/FAIL] |
 
-# 3. Plot Raw Data
-# fig, ax = plot_raw_timeseries(...)
-# fig.savefig("raw_data.png")
-
-# 4. Initialize and Run Analysis
-# [Code to run the test]
-
-# 5. Print Results
-# print(results)
-
-# 6. Plot Results/Envelopes
-# fig.savefig("results.png")
-
-# 7. Plot Diagnostics
-# fig.savefig("diagnostics.png")
-```
-
-## 6. Results Output
-**Console/Text Output:**
-```text
-[Paste the actual text output, dictionary, or log from the code execution here]
-```
-
-## 7. Visual Evidence
-**Raw Data:**
-![Raw Data Plot](raw_data.png)
-*[Caption describing the input data.]*
-
-**Results Plot:**
-![Results Plot](results.png)
-*[Caption describing what is seen in the plot.]*
-
-**Diagnostics:**
-![Diagnostics Plot](diagnostics.png)
-*[Caption describing the diagnostic plots.]*
-
-## 8. Interpretation & Conclusion
+## 7. Interpretation & Conclusion
 **Analysis:**
-[Detailed interpretation of the results. Did the detector behave as expected? Were the estimates accurate? Did any unexpected warnings appear?]
+[Discuss how the methods performed. Did one outperform the other? Were the results expected given the data characteristics?]
 
-**Diagnostics Interpretation:**
-[Review of the diagnostic plots. Do they support the validity of the analysis? Are the assumptions of the model met?]
-
-**Pass/Fail Status:**
-- [ ] **PASS**
-- [ ] **FAIL**
-
-**Notes:**
-[Any additional observations or follow-up actions required.]
+**Anomalies:**
+[Did any runs fail or produce warnings? Discuss any specific edge cases encountered.]
