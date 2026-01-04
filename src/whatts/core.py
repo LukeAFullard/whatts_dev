@@ -144,7 +144,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
 
         # 5. Upper Tolerance Limit (The "Regulatory Assurance Value")
         # Get the probability rank for the UTL
-        utl_rank = wilson_score_upper_tolerance(
+        utl_rank, wh_method = wilson_score_upper_tolerance(
             p_hat=target_percentile,
             n=n,
             n_eff=n_eff,
@@ -184,7 +184,8 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             "probability_of_compliance": compliance_prob,
             "projected_data": analysis_data,
             "tau": tau,
-            "p_value": p_value
+            "p_value": p_value,
+            "wh_method_used": wh_method
         }
     else:
         raise ValueError(f"Unknown method: {method}")

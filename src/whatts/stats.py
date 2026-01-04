@@ -171,7 +171,10 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95,
     is_small = (n_eff <= small_n_threshold and dist_from_top <= distance_threshold)
     is_med = (small_n_threshold < n_eff <= medium_n_threshold and dist_from_top <= distance_threshold)
 
+    method_used = "Standard Wilson-Hazen"
+
     if is_small or is_med:
+        method_used = "Chi-Square Correction"
         # Handle perfect compliance (dist_from_top <= 0)
         # If no failures observed (or implied), the upper bound is 1.0.
         if dist_from_top <= 0:
@@ -181,4 +184,4 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95,
             # FIX: Use n_eff in denominator.
             upper_lim = 1.0 - 0.5 * chi2.ppf(alpha, 2 * dist_from_top) / n_eff
 
-    return min(1.0, upper_lim)
+    return min(1.0, upper_lim), method_used
