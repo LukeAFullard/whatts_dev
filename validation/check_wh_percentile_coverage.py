@@ -52,11 +52,13 @@ def run_validation():
             # WH only, no QR -> method='projection'
             # We use default use_projection=True, but data has no trend.
             try:
+                # Force sides=1 for One-Sided UTL validation
                 res = calculate_tolerance_limit(
                     df, "date", "value",
                     target_percentile=p,
                     confidence=CONFIDENCE,
-                    method="projection"
+                    method="projection",
+                    sides=1
                 )
                 utl = res["upper_tolerance_limit"]
 
