@@ -32,21 +32,38 @@ class TestStats(unittest.TestCase):
 
     def test_wilson_score_upper_tolerance(self):
         # Validation Case: n=30, p=0.95, alpha=0.05 (conf=0.95)
+        # Testing One-Sided Limit (sides=1)
         n = 30
         p_hat = 0.95
 
-        utl_rank = wilson_score_upper_tolerance(p_hat, n, n_eff=30, conf_level=0.95)
+        # Note: function now returns (lower, upper, method)
+        lower, upper, method = wilson_score_upper_tolerance(p_hat, n, n_eff=30, conf_level=0.95, sides=1)
 
-        self.assertTrue(p_hat < utl_rank <= 1.0)
+        self.assertTrue(p_hat < upper <= 1.0)
+        # Check method name is returned
+        self.assertIn(method, ["Standard Wilson-Hazen", "Chi-Square Correction"])
 
         # Test with low n_eff
-        utl_rank_low_neff = wilson_score_upper_tolerance(p_hat, n, n_eff=5, conf_level=0.95)
+        _, upper_low_neff, _ = wilson_score_upper_tolerance(p_hat, n, n_eff=5, conf_level=0.95, sides=1)
         # Lower n_eff should result in wider interval (higher UTL rank)
-        # unless it hits 1.0.
-        # With n_eff=5, p=0.95, it likely hits 1.0.
-        # utl_rank might be 0.99.
-        # Let's check >= instead of > to be safe if both are 1.0
-        self.assertTrue(utl_rank_low_neff >= utl_rank)
+        self.assertTrue(upper_low_neff >= upper)
+
+    def test_two_sided_confidence_interval(self):
+        # Test Two-Sided Interval (sides=2)
+        # Use N=60 to trigger Chi-Square Correction (D=3 <= 5)
+        n = 60
+        p_hat = 0.95
+
+        # 1-Sided 95%
+        _, upper_1s, method1 = wilson_score_upper_tolerance(p_hat, n, conf_level=0.95, sides=1)
+        self.assertEqual(method1, "Chi-Square Correction")
+
+        # 2-Sided 95%
+        # The upper bound should correspond to 97.5% quantile of distribution, so it should be HIGHER than 1-sided 95%
+        _, upper_2s, method2 = wilson_score_upper_tolerance(p_hat, n, conf_level=0.95, sides=2)
+        self.assertEqual(method2, "Chi-Square Correction")
+
+        self.assertTrue(upper_2s > upper_1s)
 
     def test_score_test_probability(self):
         # If obs rank == null percentile, prob should be 0.5

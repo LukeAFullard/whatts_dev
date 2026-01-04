@@ -14,9 +14,9 @@ from .qr import fit_qr_current_state
 def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95,
                               regulatory_limit=None, use_projection=True, use_neff=True,
                               projection_target_date=None, method='projection', seasonal_period=None, n_boot=1000,
-                              small_n_threshold=60, medium_n_threshold=120, distance_threshold=5):
+                              small_n_threshold=60, medium_n_threshold=120, distance_threshold=5, sides=2):
     """
-    Calculates the Upper Tolerance Limit (UTL) for compliance and optionally the Probability of Compliance.
+    Calculates the Tolerance Limit / Confidence Interval for a percentile.
 
     Note:
         Rows with missing values (NaN) in the `value_col` are dropped prior to analysis.
@@ -39,6 +39,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         small_n_threshold (int): N_eff threshold for 'small' sample boundary correction (default 60).
         medium_n_threshold (int): N_eff threshold for 'medium' sample boundary correction (default 120).
         distance_threshold (float): Expected observations above percentile to trigger correction (default 5).
+        sides (int): 1 for One-Sided Limit (UTL), 2 for Two-Sided Confidence Interval (default 2).
 
     Returns:
         dict: Results including the "Compare Value" (UTL) and "Probability of Compliance".
@@ -147,23 +148,26 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         min_hazen_rank = 0.5 / n
         is_point_extrapolated = target_percentile > max_hazen_rank or target_percentile < min_hazen_rank
 
-        # 5. Upper Tolerance Limit (The "Regulatory Assurance Value")
-        # Get the probability rank for the UTL
-        utl_rank, wh_method = wilson_score_upper_tolerance(
+        # 5. Tolerance Limit / Confidence Interval (The "Regulatory Assurance Value")
+        # Get the probability ranks for the interval
+        lower_rank, upper_rank, wh_method = wilson_score_upper_tolerance(
             p_hat=target_percentile,
             n=n,
             n_eff=n_eff,
             conf_level=confidence,
             small_n_threshold=small_n_threshold,
             medium_n_threshold=medium_n_threshold,
-            distance_threshold=distance_threshold
+            distance_threshold=distance_threshold,
+            sides=sides
         )
 
-        # Map rank to value
-        utl_value = hazen_interpolate(analysis_data, utl_rank)
+        # Map ranks to values
+        lower_limit = hazen_interpolate(analysis_data, lower_rank)
+        upper_limit = hazen_interpolate(analysis_data, upper_rank)
 
-        # Determine extrapolation for UTL
-        is_utl_extrapolated = utl_rank > max_hazen_rank or utl_rank < min_hazen_rank
+        # Determine extrapolation for Limits
+        is_upper_extrapolated = upper_rank > max_hazen_rank or upper_rank < min_hazen_rank
+        is_lower_extrapolated = lower_rank > max_hazen_rank or lower_rank < min_hazen_rank
 
         # 6. Probability of Compliance
         compliance_prob = None
@@ -182,8 +186,10 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             "statistic": f"{int(target_percentile*100)}th Percentile",
             "target_percentile": target_percentile,
             "point_estimate": point_est,
-            "upper_tolerance_limit": utl_value,  # THIS is the number to compare to the limit
+            "upper_tolerance_limit": upper_limit,  # Main "Upper" value for compliance
+            "lower_tolerance_limit": lower_limit,
             "confidence_level": confidence,
+            "interval_sides": sides,
             "n_raw": n,
             "n_eff": n_eff,
             "trend_detected": is_significant,
@@ -195,7 +201,9 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             "p_value": p_value,
             "wh_method_used": wh_method,
             "point_estimate_is_extrapolated": is_point_extrapolated,
-            "utl_is_extrapolated": is_utl_extrapolated
+            "utl_is_extrapolated": is_upper_extrapolated, # Kept for backward compatibility
+            "upper_limit_is_extrapolated": is_upper_extrapolated,
+            "lower_limit_is_extrapolated": is_lower_extrapolated
         }
     else:
         raise ValueError(f"Unknown method: {method}")

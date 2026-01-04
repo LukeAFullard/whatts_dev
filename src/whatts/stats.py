@@ -116,31 +116,32 @@ def score_test_probability(p_obs, p_null, n_eff):
     # Convert Z to probability (Cumulative Distribution Function)
     return norm.cdf(z_score)
 
-def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95,
-                                 small_n_threshold=60, medium_n_threshold=120, distance_threshold=5):
+def wilson_score_interval(p_hat, n, n_eff=None, conf_level=0.95, sides=2,
+                          small_n_threshold=60, medium_n_threshold=120, distance_threshold=5):
     """
-    Calculates the One-Sided Upper Wilson Limit (Non-Parametric Upper Tolerance Limit).
+    Calculates the Wilson Score Interval (Non-Parametric Tolerance Limit) for a percentile.
 
     Args:
         p_hat (float): The target percentile (e.g., 0.95).
         n (int): Raw sample size (kept for API compatibility, but n_eff is used for logic).
         n_eff (float): Effective sample size (for variance).
         conf_level (float): Confidence level (default 0.95).
+        sides (int): 1 for One-Sided Limit, 2 for Two-Sided Interval (default 2).
         small_n_threshold (int): N_eff threshold for 'small' sample logic (default 60).
         medium_n_threshold (int): N_eff threshold for 'medium' sample logic (default 120).
         distance_threshold (float): Expected observations above percentile to trigger correction (default 5).
 
     Returns:
-        float: The probability rank corresponding to the Upper Tolerance Limit.
+        tuple: (lower_lim, upper_lim, method_used)
     """
     if n_eff is None:
         n_eff = float(n)
 
     alpha = 1 - conf_level
+    alpha_tail = alpha / sides
 
-    # --- CHANGE: One-Sided Z-Score ---
-    # We use (1 - alpha), NOT (1 - alpha/2)
-    z = norm.ppf(1 - alpha)
+    # --- Z-Score based on sides ---
+    z = norm.ppf(1 - alpha_tail)
 
     # --- Standard Wilson Calculation ---
     denom = 1 + (z**2 / n_eff)
@@ -149,10 +150,10 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95,
     term_inside_sqrt = (p_hat * (1 - p_hat) / n_eff) + (z**2 / (4 * n_eff**2))
     error_margin = np.sqrt(max(0.0, term_inside_sqrt))
 
-    # We only care about the UPPER limit
+    lower_lim = (center - z * error_margin) / denom
     upper_lim = (center + z * error_margin) / denom
 
-    # --- Boundary Corrections (One-Sided Logic) ---
+    # --- Boundary Corrections (Upper Logic Only implemented for Chi-Square) ---
     # We apply the Chi-Square correction if the sample size is small
     # and we are close to the boundary.
 
@@ -160,14 +161,7 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95,
     # Expected observations "above" the target percentile
     dist_from_top = n_eff * (1 - p_hat)
 
-    # Logic adapted from R 'binom.CI' but specific to Upper Limit
-    # and adapted for Effective Sample Size.
-
     # Expanded Chi-Square Logic:
-    # 1. Small Sample: N_eff <= 60 AND D_top <= 5
-    # 2. Medium Sample: 60 < N_eff <= 120 AND D_top <= 5
-    # (Effectively: N_eff <= 120 AND D_top <= 5)
-
     is_small = (n_eff <= small_n_threshold and dist_from_top <= distance_threshold)
     is_med = (small_n_threshold < n_eff <= medium_n_threshold and dist_from_top <= distance_threshold)
 
@@ -180,8 +174,17 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95,
         if dist_from_top <= 0:
             upper_lim = 1.0
         else:
-            # One-sided Chi-Square adjustment for upper bound
-            # FIX: Use n_eff in denominator.
-            upper_lim = 1.0 - 0.5 * chi2.ppf(alpha, 2 * dist_from_top) / n_eff
+            # Chi-Square adjustment for upper bound.
+            # Using alpha_tail ensures consistency with sides parameter.
+            # For 2-sided 95% (alpha=0.05), alpha_tail=0.025. We want the 97.5th percentile.
+            # chi2.ppf(0.025) is smaller than chi2.ppf(0.05).
+            # 1.0 - small is larger (closer to 1). Correct.
+            upper_lim = 1.0 - 0.5 * chi2.ppf(alpha_tail, 2 * dist_from_top) / n_eff
 
-    return min(1.0, upper_lim), method_used
+    # TODO: Implement similar correction for lower bound if needed,
+    # but currently only Upper Limit correction is specified.
+
+    return max(0.0, lower_lim), min(1.0, upper_lim), method_used
+
+# Alias for backward compatibility if needed, but we update callers.
+wilson_score_upper_tolerance = wilson_score_interval
