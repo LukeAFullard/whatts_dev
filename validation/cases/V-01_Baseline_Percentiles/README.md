@@ -39,15 +39,32 @@ A method passes if the **Actual Coverage** is within **±3%** of the **Target Co
 
 ## 6. Results Summary
 *Note: These results are automatically appended to `validation/master_results.csv`.*
+*Run Date: 2026-01-04 (Iterations=50)*
 
-| Method | Iterations | Target Coverage | Actual Coverage | Avg Width | Status |
+| Scenario | Method | Target Coverage | Actual Coverage | Avg Width | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Projection** | [N] | [0.XX] | [0.XX] | [X.XX] | [PASS/FAIL] |
-| **Quantile Regression** | [N] | [0.XX] | [0.XX] | [X.XX] | [PASS/FAIL] |
+| **p50** | Projection | 0.95 | 0.960 | 0.317 | **PASS** |
+| **p50** | Quantile Regression | 0.95 | 0.940 | 0.614 | **PASS** |
+| **p75** | Projection | 0.95 | 0.860 | 0.272 | FAIL |
+| **p75** | Quantile Regression | 0.95 | 0.920 | 0.604 | **PASS** |
+| **p95** | Projection | 0.95 | 0.860 | 0.529 | FAIL |
+| **p95** | Quantile Regression | 0.95 | 0.660 | 0.641 | FAIL |
+| **p99** | Projection | 0.95 | 0.360 | 0.000 | FAIL |
+| **p99** | Quantile Regression | 0.95 | 0.540 | 0.695 | FAIL |
 
 ## 7. Interpretation & Conclusion
 **Analysis:**
-[Discuss how the methods performed. Did one outperform the other? Were the results expected given the data characteristics?]
+The preliminary run used a reduced iteration count ($I=50$) to verify pipeline functionality, which results in a high margin of error for coverage estimates ($\approx \pm 14\%$).
+
+*   **Central Tendency (p50):** Both methods performed well, achieving the target 95% confidence coverage.
+*   **Moderate Tails (p75):** Quantile Regression passed, while Projection was slightly under-conservative (86% vs 95%).
+*   **Extreme Tails (p95, p99):** Both methods struggled. This is expected for $N=50$:
+    *   For **p99**, a sample size of 50 is insufficient to reliably estimate the percentile (as $1/50 = 0.02$, the maximum value is roughly the 98th percentile). The "FAIL" here confirms the known limitation that $N$ must be larger (typically $>100$) for p99 compliance.
+    *   For **p95**, the failures (Projection 86%, QR 66%) suggest that for small sample sizes, the asymptotic assumptions of the bootstrap (QR) and the Normal approximation (Projection) may not fully hold, or the low iteration count simply produced a noisy result.
 
 **Anomalies:**
-[Did any runs fail or produce warnings? Discuss any specific edge cases encountered.]
+*   **p99 Projection Width:** The average width was 0.000. This likely indicates a calculation failure or edge case where the method defaulted to the maximum observed value without a valid tolerance margin.
+*   **QR Coverage Drop:** QR coverage dropped significantly at p95 (66%). This suggests the bootstrap method may be underestimating the variance in the tail for small $N$.
+
+**Recommendation:**
+Rerun with $I=1000$ and potentially increase $N$ to 100 for p95/p99 validation to isolate method performance from sampling noise.

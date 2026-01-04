@@ -13,7 +13,8 @@ from .qr import fit_qr_current_state
 
 def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95,
                               regulatory_limit=None, use_projection=True, use_neff=True,
-                              projection_target_date=None, method='projection', seasonal_period=None):
+                              projection_target_date=None, method='projection', seasonal_period=None,
+                              n_boot=1000):
     """
     Calculates the Upper Tolerance Limit (UTL) for compliance and optionally the Probability of Compliance.
 
@@ -34,6 +35,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         projection_target_date (datetime-like, optional): Date to project the trend to (default is max date).
         method (str): 'projection' (default) or 'quantile_regression'.
         seasonal_period (int): Optional minimum block size to respect seasonality (used in QR method).
+        n_boot (int): Number of bootstrap iterations for Quantile Regression (default 1000).
 
     Returns:
         dict: Results including the "Compare Value" (UTL) and "Probability of Compliance".
@@ -74,7 +76,8 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             target_percentile=target_percentile,
             confidence=confidence,
             target_date=projection_target_date,
-            seasonal_period=seasonal_period
+            seasonal_period=seasonal_period,
+            n_boot=n_boot
         )
 
         return {

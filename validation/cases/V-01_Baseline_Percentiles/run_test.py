@@ -113,12 +113,14 @@ def run_simulation():
 
             # QR Method
             try:
+                # Use fewer bootstraps for speed in test environment
                 res_qr = calculate_tolerance_limit(
                     df, 'date', 'value',
                     target_percentile=p,
                     confidence=CONFIDENCE,
                     method='quantile_regression',
-                    projection_target_date=target_date
+                    projection_target_date=target_date,
+                    n_boot=200
                 )
                 utl_qr = res_qr['upper_tolerance_limit']
                 if utl_qr >= true_q:

@@ -1,1 +1,9 @@
 test_id,scenario,method,iterations,target_coverage,actual_coverage,avg_width,pass_status,timestamp
+V-01_p50,Percentile 50%,Projection,50,0.95,0.960,0.317,PASS,2026-01-04T19:50:55.136070
+V-01_p50,Percentile 50%,QuantileRegression,50,0.95,0.940,0.614,PASS,2026-01-04T19:50:55.136157
+V-01_p75,Percentile 75%,Projection,50,0.95,0.860,0.272,FAIL,2026-01-04T19:50:55.136168
+V-01_p75,Percentile 75%,QuantileRegression,50,0.95,0.920,0.604,PASS,2026-01-04T19:50:55.136177
+V-01_p95,Percentile 95%,Projection,50,0.95,0.860,0.529,FAIL,2026-01-04T19:50:55.136185
+V-01_p95,Percentile 95%,QuantileRegression,50,0.95,0.660,0.641,FAIL,2026-01-04T19:50:55.136193
+V-01_p99,Percentile 99%,Projection,50,0.95,0.360,0.000,FAIL,2026-01-04T19:50:55.136201
+V-01_p99,Percentile 99%,QuantileRegression,50,0.95,0.540,0.695,FAIL,2026-01-04T19:50:55.136208
