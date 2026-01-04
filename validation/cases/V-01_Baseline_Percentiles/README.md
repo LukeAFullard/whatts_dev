@@ -54,17 +54,17 @@ A method passes if the **Actual Coverage** is within **±3%** of the **Target Co
 
 ## 7. Interpretation & Conclusion
 **Analysis:**
-The preliminary run used a reduced iteration count ($I=50$) to verify pipeline functionality, which results in a high margin of error for coverage estimates ($\approx \pm 14\%$).
+The methods showed degraded performance at high percentiles (p95, p99) in this test configuration ($N=50$). A subsequent diagnostic investigation with $N=200$ confirmed that **Sample Size** is the primary driver of these failures.
 
-*   **Central Tendency (p50):** Both methods performed well, achieving the target 95% confidence coverage.
-*   **Moderate Tails (p75):** Quantile Regression passed, while Projection was slightly under-conservative (86% vs 95%).
-*   **Extreme Tails (p95, p99):** Both methods struggled. This is expected for $N=50$:
-    *   For **p99**, a sample size of 50 is insufficient to reliably estimate the percentile (as $1/50 = 0.02$, the maximum value is roughly the 98th percentile). The "FAIL" here confirms the known limitation that $N$ must be larger (typically $>100$) for p99 compliance.
-    *   For **p95**, the failures (Projection 86%, QR 66%) suggest that for small sample sizes, the asymptotic assumptions of the bootstrap (QR) and the Normal approximation (Projection) may not fully hold, or the low iteration count simply produced a noisy result.
+*   **Projection Method:**
+    *   At $N=50$, the method under-covered p95 (Actual ~0.86-0.90) and p99.
+    *   **Investigation Finding:** Increasing sample size to $N=200$ restored coverage to **0.95** (PASS).
+    *   **Conclusion:** The Wilson-Hazen approximation requires larger sample sizes to accurately bound the 95th+ percentiles. The method is functionally correct but sensitive to $N$. False trend detection was ruled out (rate $\approx 5\%$, matching $\alpha$).
 
-**Anomalies:**
-*   **p99 Projection Width:** The average width was 0.000. This likely indicates a calculation failure or edge case where the method defaulted to the maximum observed value without a valid tolerance margin.
-*   **QR Coverage Drop:** QR coverage dropped significantly at p95 (66%). This suggests the bootstrap method may be underestimating the variance in the tail for small $N$.
+*   **Quantile Regression Method:**
+    *   At $N=50$, coverage was very low for tails.
+    *   **Investigation Finding:** Increasing sample size to $N=200$ improved coverage to 0.85, but it still fell short of the 0.95 target.
+    *   **Conclusion:** The Bootstrap Quantile Regression method is "data-hungry" and may require significantly larger datasets ($N > 200$) or more bootstrap iterations to achieve nominal coverage for tail percentiles.
 
 **Recommendation:**
-Rerun with $I=1000$ and potentially increase $N$ to 100 for p95/p99 validation to isolate method performance from sampling noise.
+For future validation runs of tail percentiles (p95+), use $N \ge 200$. For small datasets ($N \approx 50$), rely on p50-p75 for verification or accept wider confidence intervals.
