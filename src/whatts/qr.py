@@ -3,7 +3,7 @@ import pandas as pd
 import statsmodels.api as sm
 from .bootstrap import generate_block_bootstraps
 
-def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95, target_date=None, seasonal_period=None):
+def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95, target_date=None, seasonal_period=None, n_boot=1000):
     """
     Fits Quantile Regression and estimates the Current State (final date)
     using Block Bootstrapping for uncertainty.
@@ -17,6 +17,7 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95,
             Defaults to the maximum date (end of series).
             Supports aliases: "start", "middle", "end".
         seasonal_period (int): Optional minimum block size to respect seasonality.
+        n_boot (int): Number of bootstrap iterations (default 1000).
 
     Returns:
         dict: {
@@ -29,7 +30,16 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95,
     # Convert dates to Ordinals or fractional years
     # Standardize to avoid huge numbers in regression
     t_start = dates.min()
-    t_numeric = (dates - t_start).dt.days.values # X variable
+    if isinstance(dates, pd.Series):
+        t_numeric = (dates - t_start).dt.days.values
+    else:
+        # Fallback if it's an Index or something else
+        t_numeric = (dates - t_start).days.values
+
+    # Ensure t_numeric is numpy array
+    if not isinstance(t_numeric, np.ndarray):
+        t_numeric = np.array(t_numeric)
+
     y = values # Y variable
 
     # Resolve Target Date
@@ -73,7 +83,7 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95,
     bootstrap_preds = []
 
     # Create generator
-    boot_gen = generate_block_bootstraps(y, t_numeric, n_boot=1000, seasonal_period=seasonal_period)
+    boot_gen = generate_block_bootstraps(y, t_numeric, n_boot=n_boot, seasonal_period=seasonal_period)
 
     for y_boot, x_boot in boot_gen:
         try:
@@ -95,8 +105,10 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95,
     bootstrap_preds = np.array(bootstrap_preds)
 
     # Check if we have enough successful bootstraps
-    if len(bootstrap_preds) < 100:
+    if len(bootstrap_preds) < 100 and n_boot >= 100:
         raise ValueError("Quantile Regression Bootstrap failed to converge.")
+    elif len(bootstrap_preds) == 0:
+        raise ValueError("Quantile Regression Bootstrap failed to converge (0 successes).")
 
     utl_rank = confidence # e.g. 0.95
     upper_limit = np.percentile(bootstrap_preds, utl_rank * 100)
