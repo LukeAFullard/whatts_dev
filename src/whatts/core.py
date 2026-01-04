@@ -142,9 +142,14 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         # 4. Point Estimate (The "Face Value")
         point_est = hazen_interpolate(analysis_data, target_percentile)
 
+        # Determine extrapolation for point estimate
+        max_hazen_rank = (n - 0.5) / n
+        min_hazen_rank = 0.5 / n
+        is_point_extrapolated = target_percentile > max_hazen_rank or target_percentile < min_hazen_rank
+
         # 5. Upper Tolerance Limit (The "Regulatory Assurance Value")
         # Get the probability rank for the UTL
-        utl_rank = wilson_score_upper_tolerance(
+        utl_rank, wh_method = wilson_score_upper_tolerance(
             p_hat=target_percentile,
             n=n,
             n_eff=n_eff,
@@ -156,6 +161,9 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
 
         # Map rank to value
         utl_value = hazen_interpolate(analysis_data, utl_rank)
+
+        # Determine extrapolation for UTL
+        is_utl_extrapolated = utl_rank > max_hazen_rank or utl_rank < min_hazen_rank
 
         # 6. Probability of Compliance
         compliance_prob = None
@@ -184,7 +192,10 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             "probability_of_compliance": compliance_prob,
             "projected_data": analysis_data,
             "tau": tau,
-            "p_value": p_value
+            "p_value": p_value,
+            "wh_method_used": wh_method,
+            "point_estimate_is_extrapolated": is_point_extrapolated,
+            "utl_is_extrapolated": is_utl_extrapolated
         }
     else:
         raise ValueError(f"Unknown method: {method}")
