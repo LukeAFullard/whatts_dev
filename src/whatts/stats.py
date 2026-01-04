@@ -3,12 +3,46 @@ from scipy.stats import norm, chi2
 
 def hazen_interpolate(data, target_rank):
     """
-    Interpolates a value from 'data' at the specific 'target_rank' (0 to 1).
+    Interpolates a value from 'data' at the specific 'target_rank' (0 to 1)
+    using Probit (Z-score) interpolation to handle tail curvature and extrapolation.
     """
     data_sorted = np.sort(data)
     n = len(data)
     hazen_ranks = (np.arange(1, n + 1) - 0.5) / n
-    return np.interp(target_rank, hazen_ranks, data_sorted)
+
+    # --- CHANGE: Probit Interpolation ---
+    # Instead of linear interpolation on p (flat tails), we interpolate on Z (curved tails).
+    # This also allows extrapolation beyond the data range.
+
+    # Transform Hazen ranks to Z-scores
+    z_scores = norm.ppf(hazen_ranks)
+
+    # Transform target rank to target Z
+    # Clamp rank to avoid infinity, though Hazen avoids 0/1 for the data ranks.
+    # Floating point precision limits: ~1e-16 is epsilon, so 1e-9 is safe.
+    safe_rank = np.clip(target_rank, 1e-9, 1.0 - 1e-9)
+    z_target = norm.ppf(safe_rank)
+
+    # Handle small n (cannot extrapolate with slope)
+    if n < 2:
+        return data_sorted[0]
+
+    # Extrapolation Logic
+    if z_target > z_scores[-1]:
+        # Upper Tail Extrapolation
+        # Slope determined by last two points
+        slope = (data_sorted[-1] - data_sorted[-2]) / (z_scores[-1] - z_scores[-2])
+        return data_sorted[-1] + slope * (z_target - z_scores[-1])
+
+    elif z_target < z_scores[0]:
+        # Lower Tail Extrapolation
+        # Slope determined by first two points
+        slope = (data_sorted[1] - data_sorted[0]) / (z_scores[1] - z_scores[0])
+        return data_sorted[0] + slope * (z_target - z_scores[0])
+
+    else:
+        # Interpolation (Piecewise Linear in Z-space)
+        return np.interp(z_target, z_scores, data_sorted)
 
 def inverse_hazen(data, value):
     """
