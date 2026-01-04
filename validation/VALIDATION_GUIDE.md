@@ -1,306 +1,121 @@
-# Validation Guide for whatts Package
+# whatts Validation Plan
 
-## Overview
+This document outlines a comprehensive plan for verifying the `whatts` Python package. The goal is to ensure that both the **Projection** (Wilson-Hazen) and **Quantile Regression** (QR) methods achieve correct coverage probabilities and produce reliable tolerance limits under a wide variety of conditions.
 
-This guide validates that both methods (Projection and Quantile Regression) achieve correct **coverage probability**. For 95% confidence intervals, the Upper Tolerance Limit (UTL) should exceed the true percentile in 95% of repeated experiments.
+## Verification Methodology
 
-**Target**: Coverage within ±3% of nominal level (92-98% for 95% CI)
+To ensure isolation and reproducibility, the validation suite is organized into discrete, self-contained test cases.
 
----
+### Folder Structure
+Each verification test is housed in its own numbered directory under `validation/cases/`.
+*   Example: `validation/cases/V-01_Baseline_Percentiles/`
+*   Example: `validation/cases/V-02_Sample_Size/`
 
-## Prerequisites
+### Self-Contained Execution
+There is **no master runner**. Each test folder contains a self-contained Python script (e.g., `run_test.py`) that:
+1.  Generates the specific synthetic data for that case.
+2.  Runs the `whatts` analysis (both Projection and QR methods).
+3.  Calculates coverage statistics over $N$ iterations (default: 1000).
+4.  Appends the results to the Master Results Tracking file.
 
+To run a specific test:
 ```bash
-pip install whatts numpy pandas scipy matplotlib
+python validation/cases/V-01_Baseline_Percentiles/run_test.py
 ```
 
-Required files:
-- `validation_plan.py` (included in the `validation/` directory)
-- `whatts` package installed
+### Master Results Tracking
+A master CSV file, `validation/master_results.csv`, will be created and updated by each test script. This file serves as the single source of truth for validation status.
+
+**Columns:**
+*   `test_id`: Unique identifier (e.g., "V-01_p50").
+*   `scenario`: Description of the specific condition (e.g., "Target Percentile 50%").
+*   `method`: "Projection" or "QuantileRegression".
+*   `iterations`: Number of Monte Carlo simulations run.
+*   `target_coverage`: The nominal confidence level (e.g., 0.95).
+*   `actual_coverage`: The fraction of simulations where the UTL exceeded the true percentile.
+*   `avg_width`: The average width of the tolerance interval (UTL - Point Estimate).
+*   `pass_status`: "PASS" if `actual_coverage` is within ±3% of `target_coverage`, else "FAIL".
+*   `timestamp`: Time of execution.
 
 ---
 
-## Step 1: Quick Validation Run
+## Verification Scenarios
 
-Run baseline validation (5 minutes):
+### Category 1: Baseline Performance
 
-```bash
-python validation/validation_plan.py
-```
+#### V-01: Baseline Percentile Accuracy
+**Objective**: Verify that both methods correctly estimate various percentiles for a standard normal distribution with no trend and no autocorrelation.
+**Data Description**: $N=50$, Normal distribution, no trend, $\rho=0$.
+**Scenarios**:
+*   **Median (p50)**: Test central tendency coverage.
+*   **Upper Quartile (p75)**: Test moderate tail coverage.
+*   **High Percentile (p95)**: Test standard compliance tail coverage.
+*   **Extreme Percentile (p99)**: Test extreme tail extrapolation.
 
-This executes 30 tests × 1000 iterations = 30,000 simulations.
+### Category 2: Sample Size Sensitivity
 
-**Expected output:**
-```
-Running 30 validation tests with 1000 iterations each...
-Target coverage: 95%
+#### V-02: Sample Size Effects
+**Objective**: Determine the minimum sample size required for stable estimates and verify that coverage converges as $N$ increases.
+**Data Description**: Normal distribution, no trend, $\rho=0$, Target $p=0.95$.
+**Scenarios**:
+*   **Small (N=30)**: Validates performance at the lower bound of recommended data size.
+*   **Medium (N=60)**: Represents a typical monitoring dataset (5 years of monthly data).
+*   **Large (N=120)**: Represents a robust dataset (10 years of monthly data).
+*   **Very Large (N=200)**: Asymptotic check.
 
-[1/30] Baseline_p50
-  Config: Test(n=50, dist=normal, trend=none, p=0.5, ρ=0.0, target=end)
-  Projection: 0.951 coverage, width=1.23 ✓ PASS
-  QR:         0.948 coverage, width=1.31 ✓ PASS
-...
+### Category 3: Distribution Robustness
 
-SUMMARY
-Projection Method: 28/30 tests passed (±3% tolerance)
-QR Method:         24/27 tests passed (±3% tolerance)
-```
+#### V-03: Non-Normal Distributions
+**Objective**: Verify that methods (especially Quantile Regression) handle non-normal data without excessive coverage error.
+**Data Description**: $N=100$, no trend, $\rho=0$, Target $p=0.95$.
+**Scenarios**:
+*   **Lognormal**: Right-skewed data common in environmental concentrations.
+*   **Gamma**: Skewed data often used for precipitation or flows.
+*   **Uniform**: Bounded distribution to test edge behavior.
 
----
+### Category 4: Trend Handling
 
-## Step 2: Interpret Results
+#### V-04: Linear Trends
+**Objective**: Ensure that trend detection and removal (Projection) or modeling (QR) works for monotonic changes.
+**Data Description**: $N=60$, Normal distribution, $\rho=0$, Target $p=0.95$.
+**Scenarios**:
+*   **Linear Up**: Moderate increasing trend ($0.05\sigma/t$).
+*   **Linear Down**: Moderate decreasing trend ($-0.05\sigma/t$).
 
-### Coverage Metrics
+#### V-05: Nonlinear Trends
+**Objective**: Test robustness against model misspecification (Projection assumes linearity).
+**Data Description**: $N=60$, Normal distribution, $\rho=0$, Target $p=0.95$.
+**Scenarios**:
+*   **Quadratic**: A curved trend ($y \propto t^2$).
+*   **Step Change**: A sudden shift in mean (Regime change).
 
-**Pass criteria:**
-- `0.92 ≤ coverage ≤ 0.98` for 95% confidence
-- Failures indicate either:
-  - Under-coverage (<0.92): Intervals too narrow, false confidence
-  - Over-coverage (>0.98): Intervals too wide, loss of statistical power
+### Category 5: Autocorrelation Handling
 
-### Interval Width
-
-- **Narrower is not better** if coverage is inadequate
-- Compare methods: QR should have similar/slightly wider intervals for heteroscedastic data
-- Width increases with: autocorrelation, higher percentiles, smaller n
-
-### Common Failure Patterns
-
-| Failure Type | Likely Cause | Action |
-|-------------|--------------|--------|
-| Under-coverage (both methods) | True percentile calculation error | Check `generate_series()` math |
-| Under-coverage (Projection only) | n_eff adjustment inadequate | Check AR(1) formula for high ρ |
-| Under-coverage (QR only) | Bootstrap block size wrong | Adjust for seasonality |
-| QR failures > Projection | Insufficient n for tail estimation | Expected for n<50 |
-
----
-
-## Step 3: Deep Validation (Publication Quality)
-
-For paper submission, run extended validation (2-4 hours):
-
-```python
-# Edit validation_plan.py:
-results = run_full_validation(n_iterations=10000, confidence=0.95)
-```
-
-**Monte Carlo error**: With 10,000 iterations, standard error ≈ 0.2%, so ±3% tolerance is conservative.
-
----
-
-## Step 4: Test-by-Test Analysis
-
-### Category 1: Percentile Coverage
-
-**Tests 1-6**: Verify all percentiles (50th, 75th, 95th) work correctly.
-
-**Expected behavior:**
-- 50th percentile: Both methods converge quickly
-- 75th percentile: Projection slightly better at small n
-- 95th percentile: QR superior for heteroscedastic data
-
-**Red flags:**
-- 50th percentile fails → fundamental error in Hazen interpolation
-- Only 95th fails → tail estimation issue
-
----
-
-### Category 2: Sample Size Effects
-
-**Tests 7-9**: n=30, 60, 120
-
-**Expected behavior:**
-- n=30: Projection coverage ~0.93-0.97 (wider tolerance), QR may under-cover
-- n=60: Both methods achieve 0.94-0.96
-- n=120: Both converge to 0.945-0.955
-
-**Red flags:**
-- Coverage improves then degrades → boundary correction bug
-- QR fails at n=120 → bootstrap implementation error
-
----
-
-### Category 3: Distribution Types
-
-**Tests 10-13**: Normal, lognormal, gamma, uniform
-
-**Expected behavior:**
-- Normal: Best performance (matches theory)
-- Lognormal: Projection may slightly under-cover (right-skew challenge)
-- Gamma: QR more robust
-- Uniform: Both excellent (bounded support)
-
-**Red flags:**
-- Failures on normal only → core algorithm issue
-- Failures on skewed only → Hazen plotting position bias
-
----
-
-### Category 4: Trend Types
-
-**Tests 14-18**: None, linear up/down, quadratic, step
-
-**Expected behavior:**
-- Linear trends: Both methods excel
-- Quadratic: Projection under-covers (assumes linearity)
-- Step change: Both may struggle (regime shift)
-
-**Red flags:**
-- Linear trend fails → Mann-Kendall or projection math wrong
-- All trends fail similarly → not properly removing trend
-
----
-
-### Category 5: Autocorrelation
-
-**Tests 19-22**: ρ=0.0, 0.3, 0.6, 0.9
-
-**Expected behavior:**
-- ρ=0.0: Baseline performance
-- ρ=0.3: Slight widening, coverage maintained
-- ρ=0.6: Noticeable widening, n_eff ≈ n/2
-- ρ=0.9: Large widening, n_eff ≈ n/5-10
-
-**Red flags:**
-- Under-coverage at ρ=0.6+: n_eff formula inadequate
-- Over-coverage throughout: Too conservative correction
-
----
+#### V-06: Autocorrelation Correction
+**Objective**: Verify the Effective Sample Size ($n_{eff}$) adjustments and block bootstrapping. High autocorrelation reduces information content, requiring wider intervals to maintain coverage.
+**Data Description**: $N=100$, Normal distribution, no trend, Target $p=0.95$.
+**Scenarios**:
+*   **Low ($\rho=0.3$)**: Minor serial correlation.
+*   **Moderate ($\rho=0.6$)**: Significant serial correlation.
+*   **High ($\rho=0.8$)**: Strong persistence.
+*   **High + Trend**: Linear trend with $\rho=0.6$ noise.
 
 ### Category 6: Projection Targets
 
-**Tests 23-25**: Start, middle, end
+#### V-07: Target Date Sensitivity
+**Objective**: Verify that the system correctly projects tolerance limits to different points in time.
+**Data Description**: $N=60$, Linear Up trend, Target $p=0.95$.
+**Scenarios**:
+*   **Start**: Retrospective analysis (Project to $t=0$).
+*   **Middle**: Mid-period analysis (Project to $t=N/2$).
+*   **End**: Current state analysis (Project to $t=N$).
 
-**Expected behavior:**
-- All achieve similar coverage
-- Width differs based on extrapolation distance
-- Start = most conservative (longest extrapolation for improving sites)
+### Category 7: Stress Tests & Edge Cases
 
-**Red flags:**
-- 'Middle' fails but others pass → time calculation bug
-- Coverage diverges >5% between targets → projection math error
-
----
-
-### Category 7: Stress Tests
-
-**Tests 26-28**: Edge cases
-
-**Test 26 (High Noise):**
-- Expect wider intervals, coverage ~0.94-0.96
-- Failure → signal/noise ratio detection issue
-
-**Test 27 (Small n + High ρ):**
-- Expect n_eff < 10, very wide intervals
-- Projection may slightly under-cover (n_eff formula limit)
-- QR should refuse (convergence failure)
-
-**Test 28 (Median + Step Change):**
-- Both methods may under-cover slightly (0.92-0.93)
-- Acceptable if documented limitation
-
----
-
-## Step 5: Generate Diagnostic Plots
-
-Add after test completion:
-
-```python
-import matplotlib.pyplot as plt
-
-def plot_coverage_by_category(results):
-    """Visual summary of validation results."""
-
-    categories = {
-        'Percentile': [r for r in results if 'Baseline' in r['test'].name or 'Trend_p' in r['test'].name],
-        'Sample Size': [r for r in results if 'SampleSize' in r['test'].name],
-        'Distribution': [r for r in results if 'Distribution' in r['test'].name],
-        'Trend Type': [r for r in results if r['test'].name.startswith('Trend_')],
-        'Autocorr': [r for r in results if 'Autocorr' in r['test'].name],
-        'Target': [r for r in results if r['test'].name.startswith('Target_')],
-        'Stress': [r for r in results if 'Stress' in r['test'].name]
-    }
-
-    fig, axes = plt.subplots(2, 4, figsize=(16, 8))
-    axes = axes.flatten()
-
-    for idx, (cat_name, cat_results) in enumerate(categories.items()):
-        ax = axes[idx]
-
-        proj_cov = [r['projection_coverage'] for r in cat_results]
-        qr_cov = [r['qr_coverage'] for r in cat_results if not np.isnan(r['qr_coverage'])]
-
-        x = range(len(proj_cov))
-        ax.scatter(x, proj_cov, label='Projection', alpha=0.7)
-        ax.scatter(range(len(qr_cov)), qr_cov, label='QR', alpha=0.7)
-
-        ax.axhline(0.95, color='green', linestyle='--', label='Target')
-        ax.axhline(0.92, color='red', linestyle=':', alpha=0.5)
-        ax.axhline(0.98, color='red', linestyle=':', alpha=0.5)
-
-        ax.set_title(cat_name)
-        ax.set_ylabel('Coverage')
-        ax.set_ylim(0.85, 1.0)
-        ax.legend()
-
-    plt.tight_layout()
-    plt.savefig('validation_coverage_summary.png', dpi=300)
-    print("Saved: validation_coverage_summary.png")
-
-# Run after validation
-plot_coverage_by_category(results)
-```
-
----
-
-## Step 6: Document Findings
-
-Create `VALIDATION_REPORT.md`:
-
-```markdown
-# Validation Report
-
-**Date**: YYYY-MM-DD
-**Iterations**: 10,000 per test
-**Target Coverage**: 95% (±3% tolerance)
-
-## Overall Results
-- Projection Method: X/30 tests passed
-- QR Method: X/27 tests passed
-
-## Known Limitations
-1. [If quadratic trends fail]: Methods assume linear trends
-2. [If high ρ fails]: AR(1) approximation breaks down at ρ>0.8
-3. [If QR fails at n=30]: QR requires n≥50 for stable 95th percentile
-
-## Recommendations
-- Use Projection for: [conditions where it excels]
-- Use QR for: [conditions where it excels]
-- Avoid both for: [documented failure modes]
-```
-
----
-
-## Step 7: Regression Testing
-
-Add to CI/CD pipeline:
-
-```yaml
-# .github/workflows/validation.yml
-name: Statistical Validation
-
-on: [push, pull_request]
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run quick validation
-        run: |
-          python validation/validation_plan.py > validation_output.txt
-          # Check for failures
-          grep "SUMMARY" validation_output.txt
-```
-
-**Pass criteria for CI**: ≥90% of tests pass (27/30)
+#### V-08: Stress Tests
+**Objective**: Push the methods to their breaking points to identify failure modes.
+**Scenarios**:
+*   **High Noise**: Signal-to-noise ratio is very low. Tests trend detection robustness.
+*   **Small N + High Rho**: $N=20, \rho=0.7$. Extremely low effective sample size ($n_{eff} < 10$). Should trigger warnings and potentially wide intervals.
+*   **Step + Median**: Step trend looking at the 50th percentile.
+*   **Mixed Distribution + Trend**: Gamma distribution with a linear trend and moderate autocorrelation.
