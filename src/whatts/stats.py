@@ -116,7 +116,8 @@ def score_test_probability(p_obs, p_null, n_eff):
     # Convert Z to probability (Cumulative Distribution Function)
     return norm.cdf(z_score)
 
-def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95):
+def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95,
+                                 small_n_threshold=60, medium_n_threshold=120, distance_threshold=5):
     """
     Calculates the One-Sided Upper Wilson Limit (Non-Parametric Upper Tolerance Limit).
 
@@ -125,6 +126,9 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95):
         n (int): Raw sample size (kept for API compatibility, but n_eff is used for logic).
         n_eff (float): Effective sample size (for variance).
         conf_level (float): Confidence level (default 0.95).
+        small_n_threshold (int): N_eff threshold for 'small' sample logic (default 60).
+        medium_n_threshold (int): N_eff threshold for 'medium' sample logic (default 120).
+        distance_threshold (float): Expected observations above percentile to trigger correction (default 5).
 
     Returns:
         float: The probability rank corresponding to the Upper Tolerance Limit.
@@ -153,14 +157,19 @@ def wilson_score_upper_tolerance(p_hat, n, n_eff=None, conf_level=0.95):
     # and we are close to the boundary.
 
     # FIX: Use n_eff for boundary logic to account for autocorrelation.
-    x_eff = p_hat * n_eff
-    dist_from_top = n_eff - x_eff
+    # Expected observations "above" the target percentile
+    dist_from_top = n_eff * (1 - p_hat)
 
     # Logic adapted from R 'binom.CI' but specific to Upper Limit
     # and adapted for Effective Sample Size.
-    is_small = (n_eff <= 50 and dist_from_top <= 2)
-    # FIX: Ensure no gap between 50 and 51 for float n_eff
-    is_med = (50 < n_eff <= 100 and dist_from_top <= 3)
+
+    # Expanded Chi-Square Logic:
+    # 1. Small Sample: N_eff <= 60 AND D_top <= 5
+    # 2. Medium Sample: 60 < N_eff <= 120 AND D_top <= 5
+    # (Effectively: N_eff <= 120 AND D_top <= 5)
+
+    is_small = (n_eff <= small_n_threshold and dist_from_top <= distance_threshold)
+    is_med = (small_n_threshold < n_eff <= medium_n_threshold and dist_from_top <= distance_threshold)
 
     if is_small or is_med:
         # Handle perfect compliance (dist_from_top <= 0)

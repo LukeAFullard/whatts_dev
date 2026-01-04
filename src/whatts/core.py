@@ -13,7 +13,8 @@ from .qr import fit_qr_current_state
 
 def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95,
                               regulatory_limit=None, use_projection=True, use_neff=True,
-                              projection_target_date=None, method='projection', seasonal_period=None, n_boot=1000):
+                              projection_target_date=None, method='projection', seasonal_period=None, n_boot=1000,
+                              small_n_threshold=60, medium_n_threshold=120, distance_threshold=5):
     """
     Calculates the Upper Tolerance Limit (UTL) for compliance and optionally the Probability of Compliance.
 
@@ -35,6 +36,9 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         method (str): 'projection' (default) or 'quantile_regression'.
         seasonal_period (int): Optional minimum block size to respect seasonality (used in QR method).
         n_boot (int): Number of bootstrap iterations (default 1000) (used in QR method).
+        small_n_threshold (int): N_eff threshold for 'small' sample boundary correction (default 60).
+        medium_n_threshold (int): N_eff threshold for 'medium' sample boundary correction (default 120).
+        distance_threshold (float): Expected observations above percentile to trigger correction (default 5).
 
     Returns:
         dict: Results including the "Compare Value" (UTL) and "Probability of Compliance".
@@ -144,7 +148,10 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             p_hat=target_percentile,
             n=n,
             n_eff=n_eff,
-            conf_level=confidence
+            conf_level=confidence,
+            small_n_threshold=small_n_threshold,
+            medium_n_threshold=medium_n_threshold,
+            distance_threshold=distance_threshold
         )
 
         # Map rank to value
