@@ -1,0 +1,2 @@
+Iteration 60/200. Elapsed: 843.5s. Est remaining: 1968.1s
+Iteration 70/200. Elapsed: 994.4s. Est remaining: 1846.7s
