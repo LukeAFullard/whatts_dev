@@ -1,0 +1,5 @@
+Starting test V-01d_p99 - N=200, Method=quantile_regression
+Target Percentile: 0.99, True Value: 2.3263
+Confidence: 0.95, Sides: 2 -> Expected UTL Coverage: 0.9750
+Iteration 50/200 - Elapsed: 547.56s
+Iteration 100/200 - Elapsed: 1083.67s
