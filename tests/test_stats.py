@@ -15,9 +15,13 @@ class TestStats(unittest.TestCase):
 
         # Test interpolation
         # Rank 0.05 -> Value 1.0
-        self.assertAlmostEqual(hazen_interpolate(data, 0.05), 1.0)
+        # hazen_interpolate now returns (value, note)
+        val, note = hazen_interpolate(data, 0.05)
+        self.assertAlmostEqual(val, 1.0)
+
         # Rank 0.95 -> Value 10.0
-        self.assertAlmostEqual(hazen_interpolate(data, 0.95), 10.0)
+        val, note = hazen_interpolate(data, 0.95)
+        self.assertAlmostEqual(val, 10.0)
 
         # Test inverse
         # Value 1.0 -> Rank 0.05

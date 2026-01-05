@@ -11,6 +11,11 @@ def hazen_interpolate(data, target_rank, min_value=None, max_value=None):
         target_rank (float): The percentile rank to estimate (0-1).
         min_value (float, optional): Minimum allowed physical value (clamping).
         max_value (float, optional): Maximum allowed physical value (clamping).
+
+    Returns:
+        tuple: (value, clamped_note)
+            value (float): The interpolated/extrapolated value.
+            clamped_note (str): "None", "Min Clamped", or "Max Clamped".
     """
     data_sorted = np.sort(data)
     n = len(data)
@@ -47,12 +52,15 @@ def hazen_interpolate(data, target_rank, min_value=None, max_value=None):
         val = np.interp(z_target, z_scores, data_sorted)
 
     # Apply Clamping
-    if min_value is not None:
-        val = max(val, min_value)
-    if max_value is not None:
-        val = min(val, max_value)
+    clamped_note = "None"
+    if min_value is not None and val < min_value:
+        val = min_value
+        clamped_note = "Min Clamped"
+    elif max_value is not None and val > max_value:
+        val = max_value
+        clamped_note = "Max Clamped"
 
-    return val
+    return val, clamped_note
 
 def inverse_hazen(data, value):
     """
