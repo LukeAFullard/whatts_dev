@@ -1,0 +1,8 @@
+Starting test V-01d_p99 - N=30, Method=projection
+Target Percentile: 0.99, True Value: 2.3263
+Confidence: 0.95, Sides: 2 -> Expected UTL Coverage: 0.9750
+Iteration 50/200 - Elapsed: 1.15s
+Iteration 100/200 - Elapsed: 2.31s
+Iteration 150/200 - Elapsed: 3.58s
+Iteration 200/200 - Elapsed: 4.68s
+Finished. Coverage: 0.8700 (Target: 0.9750), Status: FAIL
