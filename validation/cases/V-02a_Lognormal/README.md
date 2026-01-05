@@ -42,12 +42,19 @@ A method passes if the **Actual Coverage** is within **±3%** of the **Target Co
 
 | Method | Iterations | Target Coverage | Actual Coverage | Avg Width | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Projection** | [N] | [0.XX] | [0.XX] | [X.XX] | [PASS/FAIL] |
-| **Quantile Regression** | [N] | [0.XX] | [0.XX] | [X.XX] | [PASS/FAIL] |
+| **Projection (N=30)** | 200 | 0.95 | 0.870 | 11.469 | FAIL |
+| **Projection (N=60)** | 200 | 0.95 | 0.960 | 8.162 | PASS |
+| **Projection (N=100)** | 200 | 0.95 | 0.950 | 5.033 | PASS |
+| **Projection (N=200)** | 200 | 0.95 | 0.925 | 3.135 | PASS |
+| **Quantile Regression** | [N] | [0.XX] | [0.XX] | [X.XX] | [Running] |
 
 ## 7. Interpretation & Conclusion
 **Analysis:**
-[To be filled after execution]
+*   **Projection Method:**
+    *   **N=30:** Fails significantly (87% vs 95%), likely because normality assumption is violated (Lognormal is skewed) and sample size is too small for Central Limit Theorem or robustness to kick in fully, or Probit interpolation assumes Normal tails.
+    *   **N=60, 100, 200:** Passes or is close to passing. The coverage improves as N increases, suggesting the method is asymptotically robust or the effective sample size is sufficient to handle the skewness.
+*   **Quantile Regression:**
+    *   Tests are currently running. QR is expected to perform better on skewed distributions as it is non-parametric.
 
 **Anomalies:**
-[To be filled after execution]
+*   None observed so far for Projection method beyond the expected small-N failure.

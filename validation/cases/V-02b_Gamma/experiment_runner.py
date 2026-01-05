@@ -11,11 +11,11 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../src')))
 
 try:
-    from whatts.api import calculate_tolerance_limit
+    from whatts import calculate_tolerance_limit
 except ImportError:
     # Fallback if the path is slightly different or running from elsewhere
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../src')))
-    from whatts.api import calculate_tolerance_limit
+    from whatts import calculate_tolerance_limit
 
 def run_experiment(
     n_samples,
@@ -105,10 +105,10 @@ def run_experiment(
         try:
             result = calculate_tolerance_limit(
                 df,
-                target_col='value',
+                value_col='value',
                 date_col='date',
                 target_percentile=target_percentile,
-                confidence_level=0.95, # Fixed to 95% confidence
+                confidence=0.95, # Fixed to 95% confidence
                 method=method_name,
                 sides=2, # Always 2-sided
                 n_boot=n_boot
