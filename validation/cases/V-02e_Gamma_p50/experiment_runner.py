@@ -22,7 +22,7 @@ def run_experiment(
     method_name,
     dist_name,
     dist_params,
-    target_percentile=0.95,
+    target_percentile=0.5,
     iterations=200,
     n_boot=1000,
     output_csv=None
