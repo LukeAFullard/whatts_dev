@@ -1,0 +1,9 @@
+test_id,scenario,method,iterations,target_coverage,actual_coverage,avg_width,pass_status,timestamp
+V-01a_p50_p50_N30,p50_N30,projection,200,0.95,0.975,0.8852,PASS,2026-01-05T05:13:56.912365
+V-01a_p50_p50_N60,p50_N60,projection,200,0.95,0.98,0.6499,PASS,2026-01-05T05:14:03.017969
+V-01a_p50_p50_N100,p50_N100,projection,200,0.95,0.975,0.5119,PASS,2026-01-05T05:14:08.798744
+V-01a_p50_p50_N200,p50_N200,projection,200,0.95,0.965,0.3525,PASS,2026-01-05T05:14:16.808888
+V-01a_p50_p50_N30,p50_N30,quantile_regression,20,0.95,1.0,2.1168,PASS,2026-01-05T05:41:08.869128
+V-01a_p50_p50_N60,p50_N60,quantile_regression,20,0.95,1.0,1.1826,PASS,2026-01-05T05:41:45.750910
+V-01a_p50_p50_N100,p50_N100,quantile_regression,20,0.95,1.0,0.9802,PASS,2026-01-05T05:41:53.613246
+V-01a_p50_p50_N200,p50_N200,quantile_regression,20,0.95,1.0,0.7211,PASS,2026-01-05T05:42:27.053397

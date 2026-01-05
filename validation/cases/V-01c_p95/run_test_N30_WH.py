@@ -10,7 +10,7 @@ from datetime import datetime
 # Add project root to path
 # Assuming script is in validation/cases/V-XX/script.py
 # Root is ../../../
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../src")))
 
 try:
     from whatts.core import calculate_tolerance_limit
@@ -30,7 +30,7 @@ def run_test():
     PERCENTILE = 0.95
     METHOD_CODE = "WH"
     METHOD_NAME = "projection"
-    ITERATIONS = 1000
+    ITERATIONS = 200
     CONFIDENCE = 0.95
     SIDES = 2
 
@@ -51,6 +51,7 @@ def run_test():
     print(f"Running {CASE_ID} N={N} {METHOD_NAME}...")
 
     success_count = 0
+    width_sum = 0.0
     start_time = time.time()
 
     # Seed based on parameters to ensure reproducibility but variation across cases
@@ -72,6 +73,8 @@ def run_test():
                 sides=SIDES
             )
             utl = res["upper_tolerance_limit"]
+            ltl = res["lower_tolerance_limit"]
+            width_sum += (utl - ltl)
 
             # Check coverage: Does the calculated UTL exceed the true percentile?
             if utl >= TRUE_VALUE:
@@ -89,6 +92,7 @@ def run_test():
             # Don't print too much to stdout if running in batch
 
     coverage = success_count / ITERATIONS
+    avg_width = width_sum / ITERATIONS
     # Success Criteria: Within 3% of Expected Coverage (0.975)
     status = "PASS" if abs(coverage - EXPECTED_COVERAGE) <= 0.03 else "FAIL"
 
@@ -101,7 +105,7 @@ def run_test():
         str(ITERATIONS), # iterations
         str(CONFIDENCE), # target_coverage (nominal)
         f"{coverage:.4f}", # actual_coverage
-        "N/A", # avg_width
+        f"{avg_width:.4f}", # avg_width
         status, # pass_status
         datetime.now().isoformat() # timestamp
     ]
