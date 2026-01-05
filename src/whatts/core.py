@@ -147,7 +147,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             n_eff = float(n)
 
         # 4. Point Estimate (The "Face Value")
-        point_est = hazen_interpolate(analysis_data, target_percentile, min_value=min_value, max_value=max_value)
+        point_est, point_clamp_note = hazen_interpolate(analysis_data, target_percentile, min_value=min_value, max_value=max_value)
 
         # Determine extrapolation for point estimate
         max_hazen_rank = (n - 0.5) / n
@@ -168,8 +168,8 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         )
 
         # Map ranks to values
-        lower_limit = hazen_interpolate(analysis_data, lower_rank, min_value=min_value, max_value=max_value)
-        upper_limit = hazen_interpolate(analysis_data, upper_rank, min_value=min_value, max_value=max_value)
+        lower_limit, lower_clamp_note = hazen_interpolate(analysis_data, lower_rank, min_value=min_value, max_value=max_value)
+        upper_limit, upper_clamp_note = hazen_interpolate(analysis_data, upper_rank, min_value=min_value, max_value=max_value)
 
         # Determine extrapolation for Limits
         is_upper_extrapolated = upper_rank > max_hazen_rank or upper_rank < min_hazen_rank
@@ -209,7 +209,28 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             "point_estimate_is_extrapolated": is_point_extrapolated,
             "utl_is_extrapolated": is_upper_extrapolated, # Kept for backward compatibility
             "upper_limit_is_extrapolated": is_upper_extrapolated,
-            "lower_limit_is_extrapolated": is_lower_extrapolated
+            "lower_limit_is_extrapolated": is_lower_extrapolated,
+            "audit_trail": {
+                "n_eff_method": "Sum of Correlations (Bayley & Hammersley)",
+                "trend_method": "Mann-Kendall + Theil-Sen" if use_projection else "None",
+                "interpolation_method": "Probit (Z-Score)",
+                "wh_correction_method": wh_method,
+                "clamping_status": {
+                    "point_estimate": point_clamp_note,
+                    "lower_limit": lower_clamp_note,
+                    "upper_limit": upper_clamp_note
+                },
+                "settings": {
+                    "sides": sides,
+                    "confidence": confidence,
+                    "target_percentile": target_percentile,
+                    "small_n_threshold": small_n_threshold,
+                    "medium_n_threshold": medium_n_threshold,
+                    "distance_threshold": distance_threshold,
+                    "min_value": min_value,
+                    "max_value": max_value
+                }
+            }
         }
     else:
         raise ValueError(f"Unknown method: {method}")
