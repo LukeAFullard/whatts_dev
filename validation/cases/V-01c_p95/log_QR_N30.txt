@@ -1,0 +1,8 @@
+Starting test V-01c_p95 - N=30, Method=quantile_regression
+Target Percentile: 0.95, True Value: 1.6449
+Confidence: 0.95, Sides: 2 -> Expected Interval Coverage: 0.9500
+Iteration 50/200 - Elapsed: 363.07s
+Iteration 100/200 - Elapsed: 735.75s
+Iteration 150/200 - Elapsed: 1107.53s
+Iteration 200/200 - Elapsed: 1482.22s
+Finished. Coverage: 0.8300 (Target: 0.9500), Status: FAIL

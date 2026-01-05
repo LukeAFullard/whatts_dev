@@ -1,0 +1,8 @@
+Starting test V-01c_p95 - N=60, Method=projection
+Target Percentile: 0.95, True Value: 1.6449
+Confidence: 0.95, Sides: 2 -> Expected Interval Coverage: 0.9500
+Iteration 50/200 - Elapsed: 0.53s
+Iteration 100/200 - Elapsed: 1.04s
+Iteration 150/200 - Elapsed: 1.56s
+Iteration 200/200 - Elapsed: 2.13s
+Finished. Coverage: 0.9400 (Target: 0.9500), Status: PASS
