@@ -22,7 +22,9 @@ Every test folder **must** contain a `README.md` file derived from `validation/V
 There is **no master runner**. Each test folder contains a self-contained Python script (e.g., `run_test.py`) that:
 1.  Generates the specific synthetic data for that case.
 2.  Runs the `whatts` analysis (both Projection and QR methods).
+    *   **Configuration:** All tests must run with `sides=2` (Two-Sided Confidence Intervals) as the default.
 3.  Calculates coverage statistics over $N$ iterations (default: 1000).
+    *   **Success Metric:** For a Two-Sided 95% Confidence Interval, the Upper Limit corresponds to the **97.5th percentile**. Validation checks should verify this coverage.
 4.  Appends the results to the Master Results Tracking file.
 
 To run a specific test:
