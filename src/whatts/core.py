@@ -14,7 +14,8 @@ from .qr import fit_qr_current_state
 def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, confidence=0.95,
                               regulatory_limit=None, use_projection=True, use_neff=True,
                               projection_target_date=None, method='projection', seasonal_period=None, n_boot=1000,
-                              small_n_threshold=60, medium_n_threshold=120, distance_threshold=5, sides=2):
+                              small_n_threshold=60, medium_n_threshold=120, distance_threshold=5, sides=2,
+                              min_value=None, max_value=None):
     """
     Calculates the Tolerance Limit / Confidence Interval for a percentile.
 
@@ -40,6 +41,8 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         medium_n_threshold (int): N_eff threshold for 'medium' sample boundary correction (default 120).
         distance_threshold (float): Expected observations above percentile to trigger correction (default 5).
         sides (int): 1 for One-Sided Limit (UTL), 2 for Two-Sided Confidence Interval (default 2).
+        min_value (float, optional): Minimum allowed value for clamping (e.g., 0.0).
+        max_value (float, optional): Maximum allowed value for clamping.
 
     Returns:
         dict: Results including the "Compare Value" (UTL) and "Probability of Compliance".
@@ -144,7 +147,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             n_eff = float(n)
 
         # 4. Point Estimate (The "Face Value")
-        point_est = hazen_interpolate(analysis_data, target_percentile)
+        point_est = hazen_interpolate(analysis_data, target_percentile, min_value=min_value, max_value=max_value)
 
         # Determine extrapolation for point estimate
         max_hazen_rank = (n - 0.5) / n
@@ -165,8 +168,8 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
         )
 
         # Map ranks to values
-        lower_limit = hazen_interpolate(analysis_data, lower_rank)
-        upper_limit = hazen_interpolate(analysis_data, upper_rank)
+        lower_limit = hazen_interpolate(analysis_data, lower_rank, min_value=min_value, max_value=max_value)
+        upper_limit = hazen_interpolate(analysis_data, upper_rank, min_value=min_value, max_value=max_value)
 
         # Determine extrapolation for Limits
         is_upper_extrapolated = upper_rank > max_hazen_rank or upper_rank < min_hazen_rank

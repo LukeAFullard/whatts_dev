@@ -1,10 +1,16 @@
 import numpy as np
 from scipy.stats import norm, chi2
 
-def hazen_interpolate(data, target_rank):
+def hazen_interpolate(data, target_rank, min_value=None, max_value=None):
     """
     Interpolates a value from 'data' at the specific 'target_rank' (0 to 1)
     using Probit (Z-score) interpolation to handle tail curvature and extrapolation.
+
+    Args:
+        data (array-like): Input data values.
+        target_rank (float): The percentile rank to estimate (0-1).
+        min_value (float, optional): Minimum allowed physical value (clamping).
+        max_value (float, optional): Maximum allowed physical value (clamping).
     """
     data_sorted = np.sort(data)
     n = len(data)
@@ -25,24 +31,28 @@ def hazen_interpolate(data, target_rank):
 
     # Handle small n (cannot extrapolate with slope)
     if n < 2:
-        return data_sorted[0]
-
-    # Extrapolation Logic
-    if z_target > z_scores[-1]:
+        val = data_sorted[0]
+    elif z_target > z_scores[-1]:
         # Upper Tail Extrapolation
         # Slope determined by last two points
         slope = (data_sorted[-1] - data_sorted[-2]) / (z_scores[-1] - z_scores[-2])
-        return data_sorted[-1] + slope * (z_target - z_scores[-1])
-
+        val = data_sorted[-1] + slope * (z_target - z_scores[-1])
     elif z_target < z_scores[0]:
         # Lower Tail Extrapolation
         # Slope determined by first two points
         slope = (data_sorted[1] - data_sorted[0]) / (z_scores[1] - z_scores[0])
-        return data_sorted[0] + slope * (z_target - z_scores[0])
-
+        val = data_sorted[0] + slope * (z_target - z_scores[0])
     else:
         # Interpolation (Piecewise Linear in Z-space)
-        return np.interp(z_target, z_scores, data_sorted)
+        val = np.interp(z_target, z_scores, data_sorted)
+
+    # Apply Clamping
+    if min_value is not None:
+        val = max(val, min_value)
+    if max_value is not None:
+        val = min(val, max_value)
+
+    return val
 
 def inverse_hazen(data, value):
     """
