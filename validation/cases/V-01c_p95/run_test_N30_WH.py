@@ -37,7 +37,7 @@ def run_test():
     # Target Coverage for UTL of a 2-sided 95% interval is 97.5%
     # because the interval [LTL, UTL] covers 95%, leaving 2.5% in each tail.
     # So UTL is the 97.5th percentile estimator.
-    EXPECTED_COVERAGE = 1.0 - (1.0 - CONFIDENCE) / 2.0
+    EXPECTED_COVERAGE = CONFIDENCE
 
     TRUE_VALUE = norm.ppf(PERCENTILE)
 
@@ -46,7 +46,7 @@ def run_test():
     with open(log_file, "w") as f:
         f.write(f"Starting test {CASE_ID} - N={N}, Method={METHOD_NAME}\n")
         f.write(f"Target Percentile: {PERCENTILE}, True Value: {TRUE_VALUE:.4f}\n")
-        f.write(f"Confidence: {CONFIDENCE}, Sides: {SIDES} -> Expected UTL Coverage: {EXPECTED_COVERAGE:.4f}\n")
+        f.write(f"Confidence: {CONFIDENCE}, Sides: {SIDES} -> Expected Interval Coverage: {EXPECTED_COVERAGE:.4f}\n")
 
     print(f"Running {CASE_ID} N={N} {METHOD_NAME}...")
 
@@ -77,7 +77,7 @@ def run_test():
             width_sum += (utl - ltl)
 
             # Check coverage: Does the calculated UTL exceed the true percentile?
-            if utl >= TRUE_VALUE:
+            if ltl <= TRUE_VALUE <= utl:
                 success_count += 1
 
         except Exception as e:

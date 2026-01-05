@@ -208,7 +208,28 @@ def wilson_score_interval(p_hat, n, n_eff=None, conf_level=0.95, sides=2,
             # Chi-Square adjustment for lower bound
             lower_lim = 0.5 * chi2.ppf(alpha_tail, 2 * dist_from_bottom) / n_eff
 
+    # 3. Handle perfect compliance edge case (p_hat=1.0)
+    if p_hat >= 1.0:
+        upper_lim = 1.0
+        # If it was 1.0, lower limit is handled by Wilson or Chi-Square above.
+
     return max(0.0, lower_lim), min(1.0, upper_lim), method_used
 
 # Alias for backward compatibility if needed, but we update callers.
-wilson_score_upper_tolerance = wilson_score_interval
+def wilson_score_upper_tolerance(*args, **kwargs):
+    # This wrapper maintains the return signature of the old function if it was different,
+    # or just forwards it.
+    # The old signature return was likely just 'rank' or similar if it was 1-sided.
+    # But based on memory/usage, it returns (lower, upper, method).
+    # If the tests expect a single value (upper limit) for `wilson_score_upper_tolerance`,
+    # we might need to adapt.
+    # Checking `test_audit_fixes.py`:
+    #   utl_rank_corr = wilson_score_upper_tolerance(...)
+    # It expects a single float return value!
+
+    # The new function returns a tuple (lower, upper, method).
+    # We must adapt this alias to return just the Upper Limit (rank) for backward compatibility
+    # with tests that treat it as a calculation function.
+
+    res = wilson_score_interval(*args, **kwargs)
+    return res[1] # Return upper_lim

@@ -4,7 +4,7 @@ import warnings
 from .stats import (
     hazen_interpolate,
     calculate_neff_sum_corr,
-    wilson_score_upper_tolerance,
+    wilson_score_interval,
     inverse_hazen,
     score_test_probability
 )
@@ -156,7 +156,7 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
 
         # 5. Tolerance Limit / Confidence Interval (The "Regulatory Assurance Value")
         # Get the probability ranks for the interval
-        lower_rank, upper_rank, wh_method = wilson_score_upper_tolerance(
+        lower_rank, upper_rank, wh_method = wilson_score_interval(
             p_hat=target_percentile,
             n=n,
             n_eff=n_eff,
