@@ -9,7 +9,7 @@ To ensure isolation and reproducibility, the validation suite is organized into 
 ### Folder Structure
 Each verification test is housed in its own numbered directory under `validation/cases/`.
 *   Example: `validation/cases/V-01_Baseline_Percentiles/`
-*   Example: `validation/cases/V-02a_Sample_Size_Small/`
+*   Example: `validation/cases/V-02_NonNormal_Distributions/`
 
 ### Documentation Standard (README.md)
 Every test folder **must** contain a `README.md` file derived from `validation/VALIDATION_TEMPLATE.md`. This ensures consistent documentation of:
@@ -24,7 +24,7 @@ There is **no master runner**. Each test folder contains a self-contained Python
 2.  Runs the `whatts` analysis (both Projection and QR methods).
     *   **Configuration:** All tests must run with `sides=2` (Two-Sided Confidence Intervals) as the default.
 3.  Calculates coverage statistics over $N$ iterations (default: 1000).
-    *   **Success Metric:** For a Two-Sided 95% Confidence Interval, the Upper Limit corresponds to the **97.5th percentile**. Validation checks should verify this coverage.
+    *   **Success Metric:** For a Two-Sided 95% Confidence Interval, the Target Coverage is **0.95**. Validation checks should verify if the true value falls between the Lower and Upper Tolerance Limits.
 4.  Appends the results to the Master Results Tracking file.
 
 To run a specific test:
@@ -36,9 +36,7 @@ python validation/cases/V-01_Baseline_Percentiles/run_test.py
 The **Quantile Regression (QR)** method is computationally intensive due to bootstrapping. If a test case involves many iterations or large sample sizes, it should be **split** into multiple sub-cases to keep runtime manageable (< 10-15 minutes per script).
 
 **Naming Convention for Split Tests:**
-Use alphabetic suffixes (e.g., `V-02a`, `V-02b`).
-*   `V-02a_Sample_Size_Small` (N=30)
-*   `V-02b_Sample_Size_Large` (N=120)
+Use alphabetic suffixes (e.g., `V-02a`, `V-02b`) or file names indicating the scenario (e.g., `run_test_N30.py`).
 
 ### Master Results Tracking
 A master CSV file, `validation/master_results.csv`, will be created and updated by each test script. This file serves as the single source of truth for validation status.
@@ -62,76 +60,67 @@ A master CSV file, `validation/master_results.csv`, will be created and updated 
 
 #### V-01: Baseline Percentile Accuracy
 **Objective**: Verify that both methods correctly estimate various percentiles for a standard normal distribution with no trend and no autocorrelation.
-**Data Description**: $N=50$, Normal distribution, no trend, $\rho=0$.
+**Data Description**: Normal distribution, no trend, $\rho=0$. Test with **$N \in \{30, 60, 100, 200\}$**.
 **Scenarios**:
 *   **Median (p50)**: Test central tendency coverage.
 *   **Upper Quartile (p75)**: Test moderate tail coverage.
 *   **High Percentile (p95)**: Test standard compliance tail coverage.
 *   **Extreme Percentile (p99)**: Test extreme tail extrapolation.
 
-### Category 2: Sample Size Sensitivity (Split Recommended)
+### Category 2: Distribution Robustness
 
-#### V-02: Sample Size Effects
-**Objective**: Determine the minimum sample size required for stable estimates and verify that coverage converges as $N$ increases.
-**Note**: Split into sub-folders if QR runtime is excessive.
-*   **V-02a**: Small Sample (N=30). Validates performance at the lower bound.
-*   **V-02b**: Medium Sample (N=60). Typical monitoring dataset.
-*   **V-02c**: Large Sample (N=120). Robust dataset.
-*   **V-02d**: Very Large Sample (N=200). Asymptotic check.
-
-### Category 3: Distribution Robustness
-
-#### V-03: Non-Normal Distributions
+#### V-02: Non-Normal Distributions
 **Objective**: Verify that methods (especially Quantile Regression) handle non-normal data without excessive coverage error.
-**Data Description**: $N=100$, no trend, $\rho=0$, Target $p=0.95$.
+**Data Description**: No trend, $\rho=0$, Target $p=0.95$. Test with **$N \in \{30, 60, 100, 200\}$**.
 **Scenarios**:
 *   **Lognormal**: Right-skewed data common in environmental concentrations.
 *   **Gamma**: Skewed data often used for precipitation or flows.
 *   **Uniform**: Bounded distribution to test edge behavior.
 
-### Category 4: Trend Handling
+### Category 3: Trend Handling
 
-#### V-04: Linear Trends
+#### V-03: Linear Trends
 **Objective**: Ensure that trend detection and removal (Projection) or modeling (QR) works for monotonic changes.
-**Data Description**: $N=60$, Normal distribution, $\rho=0$, Target $p=0.95$.
+**Data Description**: Normal distribution, $\rho=0$, Target $p=0.95$. Test with **$N \in \{30, 60, 100, 200\}$**.
 **Scenarios**:
 *   **Linear Up**: Moderate increasing trend ($0.05\sigma/t$).
 *   **Linear Down**: Moderate decreasing trend ($-0.05\sigma/t$).
 
-#### V-05: Nonlinear Trends
+#### V-04: Nonlinear Trends
 **Objective**: Test robustness against model misspecification (Projection assumes linearity).
-**Data Description**: $N=60$, Normal distribution, $\rho=0$, Target $p=0.95$.
+**Data Description**: Normal distribution, $\rho=0$, Target $p=0.95$. Test with **$N \in \{30, 60, 100, 200\}$**.
 **Scenarios**:
 *   **Quadratic**: A curved trend ($y \propto t^2$).
 *   **Step Change**: A sudden shift in mean (Regime change).
 
-### Category 5: Autocorrelation Handling (Split Recommended)
+### Category 4: Autocorrelation Handling (Split Recommended)
 
-#### V-06: Autocorrelation Correction
+#### V-05: Autocorrelation Correction
 **Objective**: Verify the Effective Sample Size ($n_{eff}$) adjustments and block bootstrapping. High autocorrelation reduces information content, requiring wider intervals to maintain coverage.
-**Data Description**: $N=100$, Normal distribution, no trend, Target $p=0.95$.
+**Data Description**: Normal distribution, no trend, Target $p=0.95$. Test with **$N \in \{30, 60, 100, 200\}$**.
 **Note**: Split into sub-folders as high autocorrelation often requires more iterations or careful checking.
-*   **V-06a**: Low Autocorrelation ($\rho=0.3$).
-*   **V-06b**: Moderate Autocorrelation ($\rho=0.6$).
-*   **V-06c**: High Autocorrelation ($\rho=0.8$).
-*   **V-06d**: High + Trend. Linear trend with $\rho=0.6$ noise.
+*   **V-05a**: Low Autocorrelation ($\rho=0.3$).
+*   **V-05b**: Moderate Autocorrelation ($\rho=0.6$).
+*   **V-05c**: High Autocorrelation ($\rho=0.8$).
+*   **V-05d**: High + Trend. Linear trend with $\rho=0.6$ noise.
 
-### Category 6: Projection Targets
+### Category 5: Projection Targets
 
-#### V-07: Target Date Sensitivity
+#### V-06: Target Date Sensitivity
 **Objective**: Verify that the system correctly projects tolerance limits to different points in time.
-**Data Description**: $N=60$, Linear Up trend, Target $p=0.95$.
+**Data Description**: Linear Up trend, Target $p=0.95$. Test with **$N \in \{30, 60, 100, 200\}$**.
 **Scenarios**:
 *   **Start**: Retrospective analysis (Project to $t=0$).
 *   **Middle**: Mid-period analysis (Project to $t=N/2$).
 *   **End**: Current state analysis (Project to $t=N$).
 
-### Category 7: Stress Tests & Edge Cases (Split Recommended)
+### Category 6: Stress Tests & Edge Cases (Split Recommended)
 
-#### V-08: Stress Tests
+#### V-07: Stress Tests
 **Objective**: Push the methods to their breaking points to identify failure modes.
+**Data Description**: Various. Test with **$N \in \{30, 60, 100, 200\}$** where applicable.
 **Scenarios**:
-*   **V-08a_High_Noise**: Signal-to-noise ratio is very low.
-*   **V-08b_Small_N_High_Rho**: $N=20, \rho=0.7$. Extremely low effective sample size ($n_{eff} < 10$).
-*   **V-08c_Step_Median**: Step trend looking at the 50th percentile.
-*   **V-08d_Mixed**: Gamma distribution with a linear trend and moderate autocorrelation.
+*   **V-07a_High_Noise**: Signal-to-noise ratio is very low.
+*   **V-07b_Small_N_High_Rho**: $N=20, \rho=0.7$. Extremely low effective sample size ($n_{eff} < 10$). (Note: fixed N here due to nature of test).
+*   **V-07c_Step_Median**: Step trend looking at the 50th percentile.
+*   **V-07d_Mixed**: Gamma distribution with a linear trend and moderate autocorrelation.
