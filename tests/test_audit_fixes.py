@@ -23,13 +23,13 @@ class TestAuditFixes(unittest.TestCase):
         conf = 0.95
 
         # Calculate with n_eff passed correctly
-        utl_rank_corr = wilson_score_upper_tolerance(p_hat, n, n_eff=n_eff, conf_level=conf)
+        _, utl_rank_corr, _ = wilson_score_upper_tolerance(p_hat, n, n_eff=n_eff, conf_level=conf)
 
         # Calculate as if independent (n=15)
-        utl_rank_indep_small = wilson_score_upper_tolerance(p_hat, 15, n_eff=15, conf_level=conf)
+        _, utl_rank_indep_small, _ = wilson_score_upper_tolerance(p_hat, 15, n_eff=15, conf_level=conf)
 
         # Calculate as if independent (n=30) - this was the "bugged" behavior if it used 'n'
-        utl_rank_indep_large = wilson_score_upper_tolerance(p_hat, 30, n_eff=30, conf_level=conf)
+        _, utl_rank_indep_large, _ = wilson_score_upper_tolerance(p_hat, 30, n_eff=30, conf_level=conf)
 
         # The corrected version (n_eff=15) should match the independent version with n=15
         # because the formula now consistently uses n_eff.
