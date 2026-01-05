@@ -3,7 +3,7 @@ import pandas as pd
 import statsmodels.api as sm
 from .bootstrap import generate_block_bootstraps
 
-def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95, target_date=None, seasonal_period=None, n_boot=1000):
+def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95, target_date=None, seasonal_period=None, n_boot=1000, sides=2):
     """
     Fits Quantile Regression and estimates the Current State (final date)
     using Block Bootstrapping for uncertainty.
@@ -18,11 +18,13 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95,
             Supports aliases: "start", "middle", "end".
         seasonal_period (int): Optional minimum block size to respect seasonality.
         n_boot (int): Number of bootstrap iterations (default 1000).
+        sides (int): 1 for One-Sided Limit, 2 for Two-Sided Interval (default 2).
 
     Returns:
         dict: {
             'point_estimate': float,
             'upper_tolerance_limit': float,
+            'lower_tolerance_limit': float,
             'slope': float
         }
     """
@@ -99,9 +101,8 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95,
             # QR convergence can fail on small bootstraps with few distinct values
             continue
 
-    # 4. Calculate Upper Tolerance Limit
-    # We want the 95th percentile of the bootstrap distribution
-    # (This effectively gives the 95% Upper Confidence Bound of the 95th Percentile)
+    # 4. Calculate Tolerance Limits
+    # We want the percentiles of the bootstrap distribution of the point prediction.
     bootstrap_preds = np.array(bootstrap_preds)
 
     # Check if we have enough successful bootstraps
@@ -110,12 +111,22 @@ def fit_qr_current_state(dates, values, target_percentile=0.95, confidence=0.95,
     elif len(bootstrap_preds) == 0:
         raise ValueError("Quantile Regression Bootstrap failed to converge (0 successes).")
 
-    utl_rank = confidence # e.g. 0.95
-    upper_limit = np.percentile(bootstrap_preds, utl_rank * 100)
+    alpha = 1.0 - confidence
+    alpha_tail = alpha / sides
+
+    # Upper Limit Rank: 1 - alpha_tail
+    # e.g. 95% conf, 2-sided -> alpha=0.05, tail=0.025 -> rank=0.975
+    # e.g. 95% conf, 1-sided -> alpha=0.05, tail=0.05 -> rank=0.95
+    upper_rank = 1.0 - alpha_tail
+    lower_rank = alpha_tail
+
+    upper_limit = np.percentile(bootstrap_preds, upper_rank * 100)
+    lower_limit = np.percentile(bootstrap_preds, lower_rank * 100)
 
     return {
         "point_estimate": point_est,
         "upper_tolerance_limit": upper_limit,
+        "lower_tolerance_limit": lower_limit,
         "slope": slope_point * 365.25, # Convert to per-year for reporting
         "bootstrap_distribution": bootstrap_preds # Useful for plotting
     }

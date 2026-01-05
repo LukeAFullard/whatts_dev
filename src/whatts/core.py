@@ -81,7 +81,8 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             confidence=confidence,
             target_date=projection_target_date,
             seasonal_period=seasonal_period,
-            n_boot=n_boot
+            n_boot=n_boot,
+            sides=sides
         )
 
         return {
@@ -89,7 +90,9 @@ def calculate_tolerance_limit(df, date_col, value_col, target_percentile=0.95, c
             "target_percentile": target_percentile,
             "point_estimate": qr_res['point_estimate'],
             "upper_tolerance_limit": qr_res['upper_tolerance_limit'],
+            "lower_tolerance_limit": qr_res['lower_tolerance_limit'],
             "confidence_level": confidence,
+            "interval_sides": sides,
             "n_raw": n,
             "method": "Quantile Regression with Block Bootstrap",
             "trend_slope": qr_res['slope'],
