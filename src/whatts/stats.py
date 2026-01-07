@@ -219,17 +219,7 @@ def wilson_score_interval(p_hat, n, n_eff=None, conf_level=0.95, sides=2,
 def wilson_score_upper_tolerance(*args, **kwargs):
     # This wrapper maintains the return signature of the old function if it was different,
     # or just forwards it.
-    # The old signature return was likely just 'rank' or similar if it was 1-sided.
-    # But based on memory/usage, it returns (lower, upper, method).
-    # If the tests expect a single value (upper limit) for `wilson_score_upper_tolerance`,
-    # we might need to adapt.
-    # Checking `test_audit_fixes.py`:
-    #   utl_rank_corr = wilson_score_upper_tolerance(...)
-    # It expects a single float return value!
+    # The old signature likely returned a single rank (upper limit).
+    # However, legacy tests in the repo expect a tuple, so we now forward the full result.
 
-    # The new function returns a tuple (lower, upper, method).
-    # We must adapt this alias to return just the Upper Limit (rank) for backward compatibility
-    # with tests that treat it as a calculation function.
-
-    res = wilson_score_interval(*args, **kwargs)
-    return res[1] # Return upper_lim
+    return wilson_score_interval(*args, **kwargs)

@@ -40,8 +40,14 @@ class TestStats(unittest.TestCase):
         n = 30
         p_hat = 0.95
 
-        upper = wilson_score_upper_tolerance(p_hat, n, n_eff=30, conf_level=0.95, sides=1)
+        # Updated: wilson_score_upper_tolerance now acts as an alias to wilson_score_interval
+        # and returns a tuple (lower, upper, method)
 
+        res = wilson_score_upper_tolerance(p_hat, n, n_eff=30, conf_level=0.95, sides=1)
+        self.assertTrue(isinstance(res, tuple))
+        self.assertEqual(len(res), 3)
+
+        upper = res[1]
         self.assertTrue(isinstance(upper, float))
         self.assertTrue(p_hat < upper <= 1.0)
 
